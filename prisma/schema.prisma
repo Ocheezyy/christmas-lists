@@ -30,6 +30,7 @@ model User {
 
 model List {
   id         String      @id @default(cuid())
+  name       String?
   userId     String
   user       User        @relation(fields: [userId], references: [id])
   items      Item[]
@@ -45,6 +46,7 @@ model Item {
   url         String?
   purchased   Boolean @default(false)
   purchasedBy String?
+  priority    Int     @default(0) // 0 = none, 1 = low, 2 = medium, 3 = high
 }
 
 // Temporary share links for lists. A link allows anyone with the token

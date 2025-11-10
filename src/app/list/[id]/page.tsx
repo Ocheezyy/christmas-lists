@@ -5,7 +5,17 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Share2, ExternalLink, Check, Gift } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { ArrowLeft, Share2, ExternalLink, Check, Gift, AlertTriangle } from "lucide-react"
 
 interface Item {
   id: string
@@ -14,6 +24,7 @@ interface Item {
   url?: string
   purchased: boolean
   purchasedBy?: string
+  priority: number
 }
 
 interface List {
@@ -33,6 +44,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [shareLoading, setShareLoading] = useState(false)
   const [updatingItem, setUpdatingItem] = useState<string | null>(null)
+  const [duplicateWarning, setDuplicateWarning] = useState<{ itemId: string; itemTitle: string } | null>(null)
 
   useEffect(() => {
     const fetchList = async () => {
@@ -54,7 +66,16 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     fetchList()
   }, [id])
 
-  const handlePurchaseToggle = async (itemId: string, currentlyPurchased: boolean) => {
+  const handlePurchaseToggle = async (itemId: string, currentlyPurchased: boolean, bypassWarning = false) => {
+    // Check for duplicate purchase attempt
+    if (!bypassWarning && !currentlyPurchased) {
+      const item = list?.items.find((i) => i.id === itemId)
+      if (item?.purchased && item.purchasedBy && item.purchasedBy !== currentUserId) {
+        setDuplicateWarning({ itemId, itemTitle: item.title })
+        return
+      }
+    }
+
     setUpdatingItem(itemId)
     try {
       const response = await fetch(`/api/lists/${id}/items/${itemId}`, {
@@ -86,6 +107,13 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       alert("Failed to update item. Please try again.")
     } finally {
       setUpdatingItem(null)
+    }
+  }
+
+  const confirmDuplicatePurchase = async () => {
+    if (duplicateWarning) {
+      await handlePurchaseToggle(duplicateWarning.itemId, false, true)
+      setDuplicateWarning(null)
     }
   }
 
@@ -155,10 +183,12 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   }
 
   const isOwnList = currentUserId === list.userId
-  const visibleItems = list.items.filter((item) => {
-    if (isOwnList) return true
-    return !item.purchased || item.purchasedBy === currentUserId
-  })
+  const visibleItems = list.items
+    .filter((item) => {
+      if (isOwnList) return true
+      return !item.purchased || item.purchasedBy === currentUserId
+    })
+    .sort((a, b) => b.priority - a.priority) // Sort by priority (high to low)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
@@ -172,12 +202,21 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
             <div>
               <h1 className="text-3xl font-bold text-foreground">{list.user.name}&apos;s List</h1>
             </div>
-            {!isOwnList && (
-              <Button onClick={handleShare} disabled={shareLoading} className="gap-2">
-                <Share2 className="w-4 h-4" />
-                {shareLoading ? "Creating…" : "Share List"}
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {isOwnList && (
+                <Link href={`/list/edit/${id}`}>
+                  <Button variant="outline" className="gap-2">
+                    Edit List
+                  </Button>
+                </Link>
+              )}
+              {!isOwnList && (
+                <Button onClick={handleShare} disabled={shareLoading} className="gap-2">
+                  <Share2 className="w-4 h-4" />
+                  {shareLoading ? "Creating…" : "Share List"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -208,6 +247,19 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                         >
                           {item.title}
                         </h3>
+                        {item.priority > 0 && (
+                          <Badge
+                            variant={
+                              item.priority === 1
+                                ? "secondary"
+                                : item.priority === 2
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
+                            {item.priority === 1 ? "Low" : item.priority === 2 ? "Medium" : "High"}
+                          </Badge>
+                        )}
                         {item.purchased && (
                           <Badge variant="secondary" className="gap-1">
                             <Check className="w-3 h-3" />
@@ -263,6 +315,28 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
       </main>
+
+      {/* Duplicate Purchase Warning Dialog */}
+      <AlertDialog open={duplicateWarning !== null} onOpenChange={(open) => !open && setDuplicateWarning(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Item Already Purchased
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The item &quot;{duplicateWarning?.itemTitle}&quot; has already been marked as purchased by someone else. 
+              Are you sure you want to purchase this item as well?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDuplicatePurchase}>
+              Purchase Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

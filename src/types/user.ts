@@ -1,7 +1,13 @@
-import { Item, List, User } from '@prisma/client';
-
-export type UserWithLists = Pick<User, 'id' | 'name'> & {
-  lists: (Pick<List, 'id'> & {
-    items: Pick<Item, 'id' | 'title' | 'purchased' | 'purchasedBy'>[];
-  })[];
+export type UserWithLists = {
+  id: string;
+  name: string;
+  lists: {
+    id: string;
+    items: {
+      id: string;
+      title: string;
+      purchased: boolean;
+      purchasedBy: string | null;
+    }[];
+  }[];
 };

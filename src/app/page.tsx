@@ -5,12 +5,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Gift, Plus, LogOut } from "lucide-react"
 import { UserWithLists } from "@/types/user"
 
 export default function HomePage() {
   const [users, setUsers] = useState<UserWithLists[]>([])
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null) // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -108,6 +109,7 @@ export default function HomePage() {
                 Create New List
               </Button>
             </Link>
+            <ThemeToggle />
             <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
               <LogOut className="w-4 h-4" />
             </Button>
@@ -117,19 +119,33 @@ export default function HomePage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {users.map((user) => (
-            <Card key={user.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                  {user.name}&apos;s Lists
-                </CardTitle>
-                <CardDescription>
-                  {user.lists.length} {user.lists.length === 1 ? "list" : "lists"}
-                </CardDescription>
-              </CardHeader>
+          {users
+            .sort((a, b) => {
+              // Current user's lists always first
+              if (a.id === currentUserId) return -1
+              if (b.id === currentUserId) return 1
+              return 0
+            })
+            .map((user) => {
+              const isCurrentUser = user.id === currentUserId
+              return (
+                <Card
+                  key={user.id}
+                  className={`hover:shadow-lg transition-shadow ${
+                    isCurrentUser ? "ring-2 ring-primary" : ""
+                  }`}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                        {user.name.charAt(0).toUpperCase()}
+                      </span>
+                      {isCurrentUser ? "Your Lists" : `${user.name}'s Lists`}
+                    </CardTitle>
+                    <CardDescription>
+                      {user.lists.length} {user.lists.length === 1 ? "list" : "lists"}
+                    </CardDescription>
+                  </CardHeader>
               <CardContent className="space-y-4">
                 {user.lists.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No lists created yet.</p>
@@ -137,24 +153,24 @@ export default function HomePage() {
                   user.lists.map((list) => {
                     const itemsRemaining = list.items.filter((item) => !item.purchased).length
                     return (
-                      <div key={list.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Link href={`/list/${list.id}`}>
-                            <Button variant="link" className="p-0 h-auto font-semibold">
-                              View List
-                            </Button>
-                          </Link>
-                          <Badge variant={itemsRemaining > 0 ? "default" : "secondary"}>
-                            {itemsRemaining} remaining
-                          </Badge>
+                      <Link key={list.id} href={`/list/${list.id}`} className="block">
+                        <div className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-foreground">View List</span>
+                            <Badge variant={itemsRemaining > 0 ? "default" : "secondary"}>
+                              {itemsRemaining} remaining
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })
                 )}
               </CardContent>
             </Card>
-          ))}
+              )
+            }
+          )}
         </div>
       </main>
     </div>

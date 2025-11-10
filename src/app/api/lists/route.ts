@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     
     const userId = user.id;
 
-    const { items } = await request.json();
+    const { name, items } = await request.json();
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: 'At least one item is required' },
@@ -61,17 +61,21 @@ export async function POST(request: Request) {
     // Create a new list with items
     const list = await prisma.list.create({
       data: {
+        name: name || null,
         userId,
         items: {
           create: items.map(item => ({
             title: item.title,
             description: item.description,
             url: item.url || null,
+            priority: item.priority || 0,
           })),
         },
       },
       include: {
-        items: true,
+        items: {
+          orderBy: { priority: 'desc' },
+        },
       },
     });
 

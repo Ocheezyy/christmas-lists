@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { use, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,22 +19,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Trash2, Plus, Eye, ExternalLink, ArrowLeft } from "lucide-react"
+import { Trash2, Plus, Save, ExternalLink, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 interface ListItem {
+  id?: string
   title: string
   description: string
   url: string
   priority: number // 0 = none, 1 = low, 2 = medium, 3 = high
 }
 
-const NewListPage = () => {
+export default function EditListPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [listName, setListName] = useState("")
-  const [items, setItems] = useState<ListItem[]>([{ title: "", description: "", url: "", priority: 0 }])
+  const [items, setItems] = useState<ListItem[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [editingIndex, setEditingIndex] = useState<number | null>(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchList = async () => {
+      try {
+        const response = await fetch(`/api/lists/${id}`)
+        if (!response.ok) {
+          throw new Error("Failed to load list")
+        }
+        const data = await response.json()
+        
+        // Set list name
+        setListName(data.list.name || "")
+        
+        // Convert list items to editable format
+        const editableItems = data.list.items.map((item: { id: string; title: string; description?: string; url?: string; priority?: number }) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || "",
+          url: item.url || "",
+          priority: item.priority || 0,
+        }))
+        
+        setItems(editableItems.length > 0 ? editableItems : [{ title: "", description: "", url: "", priority: 0 }])
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to load list")
+        router.push("/")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchList()
+  }, [id, router])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -50,8 +86,8 @@ const NewListPage = () => {
         return
       }
 
-      const response = await fetch("/api/lists", {
-        method: "POST",
+      const response = await fetch(`/api/lists/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           name: listName.trim() || null,
@@ -61,13 +97,13 @@ const NewListPage = () => {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || "Failed to create list")
+        throw new Error(data.error || "Failed to update list")
       }
 
-      toast.success("List created successfully!")
+      toast.success("List updated successfully!")
       router.push("/")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create list")
+      toast.error(err instanceof Error ? err.message : "Failed to update list")
     } finally {
       setIsSubmitting(false)
     }
@@ -98,19 +134,30 @@ const NewListPage = () => {
 
   const hasValidItems = items.some((item) => item.title.trim() !== "")
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background py-8 px-4 flex items-center justify-center">
+        <div className="text-muted-foreground">Loading list...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Back Button */}
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Lists
-        </Link>
-
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Create a New List</h1>
-          <p className="text-muted-foreground">Add items with titles, descriptions, and optional links</p>
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Edit List</h1>
+              <p className="text-muted-foreground">Update your items, descriptions, and links</p>
+            </div>
+          </div>
         </div>
 
         {/* Form */}
@@ -310,8 +357,8 @@ const NewListPage = () => {
               Add Another Item
             </Button>
             <Button type="submit" disabled={isSubmitting || !hasValidItems} className="gap-2 flex-1">
-              <Eye className="w-4 h-4" />
-              Preview & Submit
+              <Save className="w-4 h-4" />
+              Save Changes
             </Button>
           </div>
         </form>
@@ -340,5 +387,3 @@ const NewListPage = () => {
     </div>
   )
 }
-
-export default NewListPage

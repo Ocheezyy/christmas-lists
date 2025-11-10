@@ -5,7 +5,17 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Share2, ExternalLink, Check, Gift, Home } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Share2, ExternalLink, Check, Gift, Home, AlertTriangle } from "lucide-react"
 
 interface Item {
   id: string;
@@ -14,6 +24,7 @@ interface Item {
   url?: string;
   purchased: boolean;
   purchasedBy?: string | null;
+  priority: number;
 }
 
 interface List {
@@ -29,6 +40,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
+  const [duplicateWarning, setDuplicateWarning] = useState<{ itemId: string; itemTitle: string } | null>(null)
 
   useEffect(() => {
     const fetchList = async () => {
@@ -50,7 +62,16 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     fetchList()
   }, [token])
 
-  const togglePurchase = async (itemId: string, currentlyPurchased: boolean) => {
+  const togglePurchase = async (itemId: string, currentlyPurchased: boolean, bypassWarning = false) => {
+    // Check for duplicate purchase attempt
+    if (!bypassWarning && !currentlyPurchased) {
+      const item = list?.items.find((i) => i.id === itemId)
+      if (item?.purchased && item.purchasedBy && item.purchasedBy !== `share:${token}`) {
+        setDuplicateWarning({ itemId, itemTitle: item.title })
+        return
+      }
+    }
+
     setProcessing(itemId)
     try {
       const res = await fetch(`/api/share/${token}/items/${itemId}`, {
@@ -73,6 +94,13 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       alert(err instanceof Error ? err.message : "Failed to update item")
     } finally {
       setProcessing(null)
+    }
+  }
+
+  const confirmDuplicatePurchase = async () => {
+    if (duplicateWarning) {
+      await togglePurchase(duplicateWarning.itemId, false, true)
+      setDuplicateWarning(null)
     }
   }
 
@@ -127,7 +155,9 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     )
   }
 
-  const visibleItems = list.items.filter((item) => !item.purchased || item.purchasedBy === `share:${token}`)
+  const visibleItems = list.items
+    .filter((item) => !item.purchased || item.purchasedBy === `share:${token}`)
+    .sort((a, b) => b.priority - a.priority) // Sort by priority (high to low)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
@@ -178,6 +208,19 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
                         >
                           {item.title}
                         </h3>
+                        {item.priority > 0 && (
+                          <Badge
+                            variant={
+                              item.priority === 1
+                                ? "secondary"
+                                : item.priority === 2
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
+                            {item.priority === 1 ? "Low" : item.priority === 2 ? "Medium" : "High"}
+                          </Badge>
+                        )}
                         {item.purchased && (
                           <Badge variant="secondary" className="gap-1">
                             <Check className="w-3 h-3" />
@@ -229,6 +272,28 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
           </div>
         )}
       </main>
+
+      {/* Duplicate Purchase Warning Dialog */}
+      <AlertDialog open={duplicateWarning !== null} onOpenChange={(open) => !open && setDuplicateWarning(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Item Already Purchased
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The item &quot;{duplicateWarning?.itemTitle}&quot; has already been marked as purchased by someone else. 
+              Are you sure you want to purchase this item as well?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDuplicatePurchase}>
+              Purchase Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
