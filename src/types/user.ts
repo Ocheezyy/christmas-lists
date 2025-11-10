@@ -1,4 +1,4 @@
-import { Item, List, User } from '@/generated/prisma/client';
+import { Item, List, User } from '@prisma/client';
 
 export type UserWithLists = Pick<User, 'id' | 'name'> & {
   lists: (Pick<List, 'id'> & {
