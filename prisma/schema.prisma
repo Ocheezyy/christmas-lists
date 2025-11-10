@@ -15,17 +15,29 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String // "Mom", "Dad", etc.
-  credentialId  String    @unique
-  publicKey     Bytes
-  transports    String? // JSON string
-  counter       BigInt    @default(0) // For WebAuthn replay protection
-  createdAt     DateTime  @default(now())
-  inviteToken   String?   @unique
+  createdAt     DateTime     @default(now())
+  inviteToken   String?      @unique
   inviteExpires DateTime?
-  isAdmin       Boolean   @default(false)
+  isAdmin       Boolean      @default(false)
   lists         List[]
+  credentials   Credential[]
+}
+
+model Credential {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String   @unique // The credential ID from WebAuthn
+  publicKey    Bytes
+  transports   String? // JSON string
+  counter      BigInt   @default(0) // For WebAuthn replay protection
+  deviceName   String? // Optional friendly name for the device
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  @@index([userId])
 }
 
 model List {

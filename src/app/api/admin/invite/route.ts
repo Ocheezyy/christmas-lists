@@ -38,8 +38,6 @@ export async function POST(req: Request) {
       data: {
         id: userId,
         name,
-        credentialId: `placeholder-${userId}`, // Temporary placeholder
-        publicKey: Buffer.from([]), // Empty buffer, will be replaced on registration
         inviteToken: token,
         inviteExpires: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours
       },

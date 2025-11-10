@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyReg } from '@/lib/webauthn';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { createSession } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -27,22 +28,22 @@ export async function POST(req: Request) {
     }
 
     // The user was already created by verifyReg in webauthn.ts
-    // Now just clear the invite token from the placeholder user if it exists
-    const placeholderUser = await prisma.user.findUnique({
+    // Clear the invite token from the user
+    await prisma.user.update({
       where: { inviteToken },
+      data: { 
+        inviteToken: null,
+        inviteExpires: null,
+      },
     });
 
-    if (placeholderUser && placeholderUser.credentialId.startsWith('placeholder-')) {
-      // Delete the placeholder user since we created a real one
-      await prisma.user.delete({
-        where: { id: placeholderUser.id },
-      });
-    }
+    // Create session for the newly registered user
+    await createSession(userId);
 
     // Clear registration cookie
     cookieStore.delete('registration');
 
-    return NextResponse.json({ verified: true });
+    return NextResponse.json({ verified: true, userId });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

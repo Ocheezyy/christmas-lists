@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { User, List, LogOut, ShoppingBag } from "lucide-react"
+import { User, List, LogOut, ShoppingBag, KeyRound } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +61,12 @@ export function UserMenu({ userName }: UserMenuProps) {
           <Link href="/purchases" className="cursor-pointer flex items-center">
             <ShoppingBag className="mr-2 h-4 w-4" />
             <span>My Purchases</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/auth/add-passkey" className="cursor-pointer flex items-center">
+            <KeyRound className="mr-2 h-4 w-4" />
+            <span>Add Passkey</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -94,8 +94,16 @@ export async function getRegOptions(userId: string, userName: string) {
     throw new Error("WebAuthn environment not properly configured");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (user) throw new Error("User already registered");
+  const user = await prisma.user.findUnique({ 
+    where: { id: userId },
+    include: { credentials: true }
+  });
+
+  // Get existing credentials to exclude them
+  const excludeCredentials = user?.credentials.map(cred => ({
+    id: cred.credentialId,
+    transports: cred.transports ? JSON.parse(cred.transports) as AuthenticatorTransportFuture[] : undefined,
+  })) || [];
 
   const options = await generateRegistrationOptions({
     rpName,
@@ -103,7 +111,7 @@ export async function getRegOptions(userId: string, userName: string) {
     userID: Buffer.from(userId),
     userName,
     userDisplayName: userName,
-    excludeCredentials: [],
+    excludeCredentials,
     authenticatorSelection: {
       residentKey: "preferred",
       userVerification: "preferred",
@@ -114,7 +122,7 @@ export async function getRegOptions(userId: string, userName: string) {
   return options;
 }
 
-export async function verifyReg(userId: string, userName: string, response: RegistrationResponseJSON) {
+export async function verifyReg(userId: string, userName: string, response: RegistrationResponseJSON, deviceName?: string) {
   if (!rpID || !origin) {
     throw new Error("WebAuthn environment not properly configured");
   }
@@ -127,22 +135,47 @@ export async function verifyReg(userId: string, userName: string, response: Regi
     expectedChallenge,
     expectedOrigin: origin as string,
     expectedRPID: rpID as string,
-    requireUserVerification: true,
+    requireUserVerification: false,
   });
 
   if (verification.verified) {
     const { credential } = verification.registrationInfo;
 
-    await prisma.user.create({
-      data: {
-        id: userId,
-        name: userName,
-        credentialId: credential.id, // Already in base64url format
-        publicKey: Buffer.from(credential.publicKey),
-        transports: null, // Leave transports null initially
-        counter: BigInt(0),
-      },
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
     });
+
+    if (!existingUser) {
+      // Create new user with their first credential
+      await prisma.user.create({
+        data: {
+          id: userId,
+          name: userName,
+          credentials: {
+            create: {
+              credentialId: credential.id,
+              publicKey: Buffer.from(credential.publicKey),
+              transports: response.response.transports ? JSON.stringify(response.response.transports) : null,
+              counter: BigInt(0),
+              deviceName,
+            },
+          },
+        },
+      });
+    } else {
+      // Add new credential to existing user
+      await prisma.credential.create({
+        data: {
+          userId,
+          credentialId: credential.id,
+          publicKey: Buffer.from(credential.publicKey),
+          transports: response.response.transports ? JSON.stringify(response.response.transports) : null,
+          counter: BigInt(0),
+          deviceName,
+        },
+      });
+    }
   }
 
   return verification;
@@ -153,23 +186,29 @@ export async function getAuthOptions(userId?: string) {
     throw new Error("WebAuthn environment not properly configured");
   }
 
-  const credentials: { id: string; transports?: AuthenticatorTransportFuture[] }[] = [];
+  const allowCredentials: { id: string; transports?: AuthenticatorTransportFuture[] }[] = [];
 
   if (userId) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (user && user.credentialId) {
-      credentials.push({
-        id: user.credentialId,
-        transports: user.transports ? 
-          JSON.parse(user.transports) as AuthenticatorTransportFuture[] : 
-          undefined,
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      include: { credentials: true }
+    });
+    
+    if (user?.credentials) {
+      user.credentials.forEach(cred => {
+        allowCredentials.push({
+          id: cred.credentialId,
+          transports: cred.transports ? 
+            JSON.parse(cred.transports) as AuthenticatorTransportFuture[] : 
+            undefined,
+        });
       });
     }
   }
 
   const options = await generateAuthenticationOptions({
     rpID: rpID as string,
-    allowCredentials: credentials,
+    allowCredentials,
     userVerification: "preferred",
   });
 
@@ -185,33 +224,37 @@ export async function verifyAuth(response: AuthenticationResponseJSON, expectedC
     throw new Error("WebAuthn environment not properly configured");
   }
 
-  // response.id is in base64url format, same as what we stored
-  const user = await prisma.user.findUnique({
+  // Find the credential by credentialId
+  const credential = await prisma.credential.findUnique({
     where: { credentialId: response.id },
+    include: { user: true },
   });
 
-  if (!user) throw new Error("User not found");
+  if (!credential) throw new Error("Credential not found");
 
   const verification = await verifyAuthenticationResponse({
     response,
     expectedChallenge,
     expectedOrigin: origin as string,
     expectedRPID: rpID as string,
-    requireUserVerification: true,
+    requireUserVerification: false,
     credential: {
-      id: user.credentialId,
-      publicKey: user.publicKey,
-      counter: Number(user.counter || 0),
+      id: credential.credentialId,
+      publicKey: credential.publicKey,
+      counter: Number(credential.counter || 0),
     },
   });
 
-  // If verification succeeds, update the counter
+  // If verification succeeds, update the counter and last used time
   if (verification.verified) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { counter: BigInt(verification.authenticationInfo.newCounter) },
+    await prisma.credential.update({
+      where: { id: credential.id },
+      data: { 
+        counter: BigInt(verification.authenticationInfo.newCounter),
+        lastUsedAt: new Date(),
+      },
     });
   }
 
-  return { verification, user };
+  return { verification, user: credential.user };
 }
