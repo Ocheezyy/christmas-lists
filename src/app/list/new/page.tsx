@@ -1,357 +1,342 @@
-'use client';
+"use client"
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import Link from 'next/link';
+import type React from "react"
+
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { ArrowLeft, Plus, Trash2, Eye, Gift } from "lucide-react"
+import Link from "next/link"
 
 interface Item {
-  title: string;
-  description: string;
-  url?: string;
+  title: string
+  description: string
+  url?: string
 }
 
-interface DeleteConfirmationModalProps {
-  itemTitle: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
+function PreviewModal({
+  items,
+  onClose,
+  onConfirm,
+  isSubmitting,
+}: {
+  items: Item[]
+  onClose: () => void
+  onConfirm: (items: Item[]) => void
+  isSubmitting: boolean
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editableItems, setEditableItems] = useState(items)
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null)
 
-function DeleteConfirmationModal({ itemTitle, onConfirm, onCancel }: DeleteConfirmationModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 className="text-lg font-semibold mb-4">Delete Item?</h3>
-        <p className="text-gray-600 mb-6">
-          Are you sure you want to delete &quot;{itemTitle}&quot;? This cannot be undone.
-        </p>
-        <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface PreviewModalProps {
-  items: Item[];
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-function PreviewModal({ items, onClose, onConfirm }: PreviewModalProps) {
-  const [editableItems, setEditableItems] = useState(items);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [deletingItem, setDeletingItem] = useState<{ index: number; title: string } | null>(null);
-  const validItems = editableItems.filter(item => item.title.trim() !== '');
+  const validItems = editableItems.filter((item) => item.title.trim() !== "")
 
   const handleEdit = (index: number, field: keyof Item, value: string) => {
-    const newItems = [...editableItems];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setEditableItems(newItems);
-  };
+    const newItems = [...editableItems]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setEditableItems(newItems)
+  }
 
   const handleSave = () => {
-    // Update the parent's items before confirming
-    items.splice(0, items.length, ...editableItems);
-    onConfirm();
-  };
+    onConfirm(editableItems)
+  }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {deletingItem && (
-          <DeleteConfirmationModal
-            itemTitle={deletingItem.title}
-            onConfirm={() => {
-              const newItems = editableItems.filter((_, i) => i !== deletingItem.index);
-              setEditableItems(newItems);
-              setDeletingItem(null);
-            }}
-            onCancel={() => setDeletingItem(null)}
-          />
-        )}
-        <div className="p-6 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Preview Your List</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <CardHeader className="border-b flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Preview Your List</CardTitle>
+            <CardDescription>Review and edit before submitting</CardDescription>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
             ✕
-          </button>
-        </div>
-        <div className="p-6 overflow-y-auto">
+          </Button>
+        </CardHeader>
+
+        <CardContent className="flex-1 overflow-y-auto p-6">
           {validItems.length === 0 ? (
-            <p className="text-gray-500">No items in your list yet.</p>
+            <div className="text-center py-12">
+              <Gift className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No items in your list yet.</p>
+            </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {validItems.map((item, index) => (
-                <div key={index} className="border rounded-lg p-4 transition-all">
+                <div key={index} className="border rounded-lg p-4 space-y-3">
                   {editingIndex === index ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Title
-                        </label>
-                        <input
-                          type="text"
+                        <label className="text-sm font-medium mb-1 block">Title</label>
+                        <Input
                           value={item.title}
-                          onChange={(e) => handleEdit(index, 'title', e.target.value)}
-                          className="w-full px-3 py-2 border rounded-md"
+                          onChange={(e) => handleEdit(index, "title", e.target.value)}
                           autoFocus
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Description
-                        </label>
+                        <label className="text-sm font-medium mb-1 block">Description</label>
                         <textarea
                           value={item.description}
-                          onChange={(e) => handleEdit(index, 'description', e.target.value)}
+                          onChange={(e) => handleEdit(index, "description", e.target.value)}
                           rows={3}
-                          className="w-full px-3 py-2 border rounded-md"
+                          className="w-full px-3 py-2 border rounded-md resize-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          URL (optional)
-                        </label>
-                        <input
+                        <label className="text-sm font-medium mb-1 block">URL (optional)</label>
+                        <Input
                           type="url"
-                          value={item.url || ''}
-                          onChange={(e) => handleEdit(index, 'url', e.target.value)}
-                          className="w-full px-3 py-2 border rounded-md"
+                          value={item.url || ""}
+                          onChange={(e) => handleEdit(index, "url", e.target.value)}
+                          placeholder="https://..."
                         />
                       </div>
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setEditingIndex(null)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          Done
-                        </button>
-                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setEditingIndex(null)} className="w-full">
+                        Done Editing
+                      </Button>
                     </div>
                   ) : (
-                    <div className="group relative">
-                      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingIndex(index)}
-                          className="p-2 text-gray-500 hover:text-gray-700"
-                        >
-                          Edit
-                        </button>
-                        {validItems.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setDeletingItem({ 
-                              index: editableItems.indexOf(item),
-                              title: item.title
-                            })}
-                            className="p-2 text-red-500 hover:text-red-700"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                      <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                      {item.description && (
-                        <p className="text-gray-600 mb-2">{item.description}</p>
-                      )}
+                    <div>
+                      <h3 className="font-semibold mb-1">{item.title}</h3>
+                      {item.description && <p className="text-sm text-muted-foreground mb-2">{item.description}</p>}
                       {item.url && (
-                        <Link
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          View Item →
+                        <Link href={item.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="link" size="sm" className="p-0 h-auto">
+                            View Item →
+                          </Button>
                         </Link>
                       )}
+                      <div className="flex gap-2 mt-3">
+                        <Button variant="outline" size="sm" onClick={() => setEditingIndex(index)} className="flex-1">
+                          Edit
+                        </Button>
+                        {validItems.length > 1 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setDeletingIndex(index)}
+                            className="flex-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {deletingIndex === index && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/30 rounded space-y-2">
+                      <p className="text-sm">Delete this item? This cannot be undone.</p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setEditableItems(editableItems.filter((_, i) => i !== index))
+                            setDeletingIndex(null)
+                          }}
+                          className="flex-1"
+                        >
+                          Delete
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setDeletingIndex(null)} className="flex-1">
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
             </div>
           )}
-        </div>
-        <div className="p-6 border-t bg-gray-50 flex justify-between gap-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
+        </CardContent>
+
+        <div className="border-t p-6 bg-muted/50 flex justify-between gap-3">
+          <Button variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={validItems.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
-          >
-            Submit List
-          </button>
+          </Button>
+          <Button onClick={handleSave} disabled={validItems.length === 0 || isSubmitting} className="gap-2">
+            {isSubmitting ? (
+              <>
+                <span className="inline-block animate-spin">⟳</span>
+                Creating...
+              </>
+            ) : (
+              <>
+                <Gift className="w-4 h-4" />
+                Submit List
+              </>
+            )}
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
-  );
+  )
 }
 
 export default function NewListPage() {
-  const router = useRouter();
-  const [items, setItems] = useState<Item[]>([{ title: '', description: '', url: '' }]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const router = useRouter()
+  const [items, setItems] = useState<Item[]>([{ title: "", description: "", url: "" }])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   const addItem = () => {
-    setItems([...items, { title: '', description: '', url: '' }]);
-  };
+    setItems([...items, { title: "", description: "", url: "" }])
+  }
 
   const updateItem = (index: number, field: keyof Item, value: string) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setItems(newItems);
-  };
+    const newItems = [...items]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setItems(newItems)
+  }
 
   const removeItem = (index: number) => {
     if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
+      setItems(items.filter((_, i) => i !== index))
     }
-  };
+  }
 
   const handlePreview = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowPreview(true);
-  };
+    e.preventDefault()
+    const hasContent = items.some((item) => item.title.trim() !== "")
+    if (!hasContent) {
+      alert("Please add at least one item")
+      return
+    }
+    setShowPreview(true)
+  }
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+  const handleSubmit = async (itemsToSubmit: Item[]) => {
+    setIsSubmitting(true)
 
     try {
-      // Filter out empty items
-      const validItems = items.filter(item => item.title.trim() !== '');
-      
-      const response = await fetch('/api/lists', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const validItems = itemsToSubmit.filter((item) => item.title.trim() !== "")
+
+      const response = await fetch("/api/lists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: validItems }),
-      });
+      })
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create list');
+        const error = await response.json()
+        throw new Error(error.message || "Failed to create list")
       }
 
-      router.push('/'); // Redirect to home page
-      router.refresh(); // Refresh the page data
+      router.push("/")
+      router.refresh()
     } catch (error) {
-      console.error('Failed to create list:', error);
-      alert('Failed to create list. Please try again.');
+      console.error("Failed to create list:", error)
+      alert("Failed to create list. Please try again.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Create New Christmas List</h1>
-      <form onSubmit={handlePreview}>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-40">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <Link href="/" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 mb-3">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Lists
+          </Link>
+          <h1 className="text-3xl font-bold">Create New List</h1>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 py-8">
         {showPreview && (
           <PreviewModal
             items={items}
             onClose={() => setShowPreview(false)}
             onConfirm={handleSubmit}
+            isSubmitting={isSubmitting}
           />
         )}
-        <div className="space-y-6">
+
+        <form onSubmit={handlePreview} className="space-y-6">
           {items.map((item, index) => (
-            <div key={index} className="border rounded-lg p-4 bg-white shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Item {index + 1}</h3>
-                {items.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              <div className="space-y-4">
+            <Card key={index} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Item {index + 1}</CardTitle>
+                  {items.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                      className="gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor={`title-${index}`} className="block text-sm font-medium text-gray-700">
-                    Title
+                  <label htmlFor={`title-${index}`} className="text-sm font-medium mb-2 block">
+                    Title *
                   </label>
-                  <input
+                  <Input
                     type="text"
                     id={`title-${index}`}
                     value={item.title}
-                    onChange={(e) => updateItem(index, 'title', e.target.value)}
+                    onChange={(e) => updateItem(index, "title", e.target.value)}
+                    placeholder="What do you want?"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                   />
                 </div>
                 <div>
-                  <label htmlFor={`description-${index}`} className="block text-sm font-medium text-gray-700">
+                  <label htmlFor={`description-${index}`} className="text-sm font-medium mb-2 block">
                     Description
                   </label>
                   <textarea
                     id={`description-${index}`}
                     value={item.description}
-                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                    onChange={(e) => updateItem(index, "description", e.target.value)}
+                    placeholder="Add details about this item..."
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    className="w-full px-3 py-2 border rounded-md resize-none"
                   />
                 </div>
                 <div>
-                  <label htmlFor={`url-${index}`} className="block text-sm font-medium text-gray-700">
+                  <label htmlFor={`url-${index}`} className="text-sm font-medium mb-2 block">
                     URL (optional)
                   </label>
-                  <input
+                  <Input
                     type="url"
                     id={`url-${index}`}
                     value={item.url}
-                    onChange={(e) => updateItem(index, 'url', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    onChange={(e) => updateItem(index, "url", e.target.value)}
+                    placeholder="https://example.com"
                   />
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
-        </div>
-        <div className="mt-6 flex gap-4">
-          <button
-            type="button"
-            onClick={addItem}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Add Another Item
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting || !items.some(item => item.title.trim() !== '')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
-          >
-            {isSubmitting ? 'Creating...' : 'Preview List'}
-          </button>
-        </div>
-      </form>
+
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" onClick={addItem} className="gap-2 flex-1 bg-transparent">
+              <Plus className="w-4 h-4" />
+              Add Another Item
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !items.some((item) => item.title.trim() !== "")}
+              className="gap-2 flex-1"
+            >
+              <Eye className="w-4 h-4" />
+              Preview & Submit
+            </Button>
+          </div>
+        </form>
+      </main>
     </div>
-  );
+  )
 }

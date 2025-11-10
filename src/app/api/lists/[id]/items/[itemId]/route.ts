@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET(
   request: Request,
@@ -8,12 +8,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const cookieStore = await cookies();
-    const currentUserId = cookieStore.get('session')?.value;
+    const user = await getSessionUser();
     
-    if (!currentUserId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const currentUserId = user.id;
 
     const list = await prisma.list.findUnique({
       where: { id },
@@ -48,12 +49,13 @@ export async function PATCH(
 ) {
   try {
     const { id, itemId } = await params;
-    const cookieStore = await cookies();
-    const currentUserId = cookieStore.get('session')?.value;
+    const user = await getSessionUser();
     
-    if (!currentUserId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const currentUserId = user.id;
 
     const { purchased } = await request.json();
 

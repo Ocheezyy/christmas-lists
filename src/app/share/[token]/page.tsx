@@ -1,7 +1,11 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { use, useEffect, useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Share2, ExternalLink, Check, Gift, Home } from "lucide-react"
 
 interface Item {
   id: string;
@@ -20,124 +24,211 @@ interface List {
 }
 
 export default function SharePage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = use(params);
-  const [list, setList] = useState<List | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState<string | null>(null);
+  const { token } = use(params)
+  const [list, setList] = useState<List | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [processing, setProcessing] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchList = async () => {
       try {
-        const res = await fetch(`/api/share/${token}`);
+        const res = await fetch(`/api/share/${token}`)
         if (!res.ok) {
-          const json = await res.json();
-          throw new Error(json?.error || 'Failed to fetch');
+          const json = await res.json()
+          throw new Error(json?.error || "Failed to fetch")
         }
-        const { list } = await res.json();
-        setList(list);
+        const { list } = await res.json()
+        setList(list)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load shared list');
+        setError(err instanceof Error ? err.message : "Failed to load shared list")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchList();
-  }, [token]);
+    fetchList()
+  }, [token])
 
   const togglePurchase = async (itemId: string, currentlyPurchased: boolean) => {
-    setProcessing(itemId);
+    setProcessing(itemId)
     try {
       const res = await fetch(`/api/share/${token}/items/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ purchased: !currentlyPurchased }),
-      });
+      })
 
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error || 'Failed to update');
+        const json = await res.json()
+        throw new Error(json?.error || "Failed to update")
       }
 
-      const { item } = await res.json();
+      const { item } = await res.json()
       setList((prev) => {
-        if (!prev) return prev;
-        return { ...prev, items: prev.items.map(i => i.id === item.id ? item : i) };
-      });
+        if (!prev) return prev
+        return { ...prev, items: prev.items.map((i) => (i.id === item.id ? item : i)) }
+      })
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update item');
+      alert(err instanceof Error ? err.message : "Failed to update item")
     } finally {
-      setProcessing(null);
+      setProcessing(null)
     }
-  };
+  }
 
   const shareToOS = async () => {
-    const url = window.location.href;
+    const url = window.location.href
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${list?.user.name}'s list`, url });
+        await navigator.share({ title: `${list?.user.name}'s list`, url })
+        return
       } catch {
-        // ignore
+        // fallback
       }
-      return;
     }
 
     try {
-      await navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard');
+      await navigator.clipboard.writeText(url)
+      alert("Link copied to clipboard")
     } catch {
-      alert(url);
+      alert(url)
     }
-  };
+  }
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (error || !list) return (
-    <div className="p-6">
-      <p className="text-red-600">{error || 'Shared list not found'}</p>
-      <Link href="/" className="text-blue-600 hover:underline mt-4 inline-block">Return home</Link>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+        <div className="animate-pulse text-center">
+          <Gift className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading shared list...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !list) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">{error || "Shared list not found"}</p>
+            <Link href="/">
+              <Button variant="outline" className="w-full gap-2 bg-transparent">
+                <Home className="w-4 h-4" />
+                Return Home
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const visibleItems = list.items.filter((item) => !item.purchased || item.purchasedBy === `share:${token}`)
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{list.user.name}&apos;s List</h1>
-          <p className="text-sm text-gray-600">Share link valid until it&apos;s expired</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={shareToOS} className="px-3 py-2 bg-gray-100 rounded-md">Share</button>
-          <Link href="/" className="px-3 py-2 bg-white border rounded-md">Home</Link>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {list.items
-          .filter(item => !item.purchased || item.purchasedBy === `share:${token}`)
-          .map(item => (
-            <div key={item.id} className={`border rounded-lg p-4 ${item.purchased ? 'bg-gray-50' : 'bg-white'}`}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className={`font-semibold ${item.purchased ? 'text-gray-500' : ''}`}>{item.title}</h3>
-                  {item.description && <p className={`text-sm ${item.purchased ? 'text-gray-400' : 'text-gray-600'}`}>{item.description}</p>}
-                  {item.url && <Link href={item.url} target="_blank" className="text-blue-600 text-sm hover:underline">View Item →</Link>}
-                </div>
-                <div>
-                  <button
-                    onClick={() => togglePurchase(item.id, item.purchased)}
-                    disabled={processing === item.id}
-                    className={`px-3 py-2 rounded-md ${item.purchased ? 'bg-gray-100 text-gray-600' : 'bg-green-600 text-white'}`}
-                  >
-                    {processing === item.id ? '...' : item.purchased ? 'Unpurchase' : 'Mark as Purchased'}
-                  </button>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-3xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{list.user.name}&apos;s List</h1>
+              <p className="text-sm text-muted-foreground">Shared with you</p>
             </div>
-          ))}
-      </div>
+            <div className="flex gap-2">
+              <Button onClick={shareToOS} variant="outline" size="icon" title="Share this list">
+                <Share2 className="w-4 h-4" />
+              </Button>
+              <Link href="/">
+                <Button variant="outline" size="icon" title="Go home">
+                  <Home className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      {list.items.length === 0 && <p className="text-center text-gray-500 mt-8">No items in this list yet.</p>}
+      <main className="max-w-3xl mx-auto px-4 py-8">
+        {visibleItems.length === 0 ? (
+          <Card>
+            <CardContent className="pt-12 text-center">
+              <Gift className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">No items available in this list.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {visibleItems.map((item) => (
+              <Card
+                key={item.id}
+                className={`transition-all ${item.purchased ? "opacity-75 bg-muted/50" : "hover:shadow-lg"}`}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3
+                          className={`text-lg font-semibold ${
+                            item.purchased ? "line-through text-muted-foreground" : ""
+                          }`}
+                        >
+                          {item.title}
+                        </h3>
+                        {item.purchased && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Check className="w-3 h-3" />
+                            Purchased
+                          </Badge>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className={`${item.purchased ? "text-muted-foreground" : "text-foreground/70"}`}>
+                          {item.description}
+                        </p>
+                      )}
+                      {item.url && (
+                        <Link href={item.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="link" className="p-0 h-auto gap-1 text-primary">
+                            View Item
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                    <Button
+                      onClick={() => togglePurchase(item.id, item.purchased)}
+                      disabled={processing === item.id}
+                      variant={item.purchased ? "outline" : "default"}
+                      className="gap-2 whitespace-nowrap"
+                    >
+                      {processing === item.id ? (
+                        <>
+                          <span className="inline-block animate-spin">⟳</span>
+                          Updating…
+                        </>
+                      ) : item.purchased ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Unpurchase
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-4 h-4" />
+                          Purchase
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
-  );
+  )
 }

@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
 import { randomBytes } from 'crypto';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const cookieStore = await cookies();
-    const currentUserId = cookieStore.get('session')?.value;
-    if (!currentUserId) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const currentUserId = user.id;
 
     // Verify list exists and current user is the owner
     const list = await prisma.list.findUnique({ where: { id } });

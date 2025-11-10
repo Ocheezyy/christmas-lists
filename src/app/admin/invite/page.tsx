@@ -1,100 +1,157 @@
-'use client';
+"use client"
 
-import { useState } from "react";
+import type React from "react"
 
-export default function InvitePage() {
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Copy, Check, Gift, AlertCircle } from "lucide-react"
+import Link from "next/link"
+
+export default function AdminInvitePage() {
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
+    const formData = new FormData(e.currentTarget)
+    const name = formData.get("name") as string
 
     try {
       const response = await fetch("/api/admin/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
-      });
+      })
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create invite");
+        const data = await response.json()
+        throw new Error(data.error || "Failed to create invite")
       }
 
-      const data = await response.json();
-      setInviteUrl(data.url);
+      const data = await response.json()
+      setInviteUrl(data.url)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create invite");
+      setError(err instanceof Error ? err.message : "Failed to create invite")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
+
+  const handleCopy = async () => {
+    if (!inviteUrl) return
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      alert("Failed to copy link")
+    }
+  }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">Create Invite Link</h1>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-            Family Member Name
-          </label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            placeholder="e.g., Mom, Dad, Sister"
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {loading ? "Creating..." : "Generate Invite Link"}
-        </button>
-      </form>
-
-      {inviteUrl && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <h2 className="text-sm font-semibold text-green-800 mb-2">Invite Link Created!</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={inviteUrl}
-              readOnly
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
-            />
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(inviteUrl);
-                alert("Link copied to clipboard!");
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-            >
-              Copy
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto">
+            <Gift className="w-6 h-6" />
           </div>
-          <p className="text-xs text-gray-600 mt-2">
-            This link expires in 24 hours
-          </p>
+          <h1 className="text-3xl font-bold">Create Invite Link</h1>
+          <p className="text-muted-foreground">Invite family members to join</p>
         </div>
-      )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Generate Invite</CardTitle>
+            <CardDescription>Create a personalized link for a family member</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {!inviteUrl ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium">
+                    Family Member Name
+                  </label>
+                  <Input id="name" name="name" type="text" placeholder="e.g., Mom" required disabled={loading} />
+                </div>
+
+                <Button type="submit" disabled={loading} size="lg" className="w-full gap-2">
+                  {loading ? (
+                    <>
+                      <span className="inline-block animate-spin">⟳</span>
+                      Creating...
+                    </>
+                  ) : (
+                    "Generate Invite Link"
+                  )}
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <Alert className="bg-secondary/10 border-secondary/50">
+                  <Check className="h-4 w-4 text-secondary-foreground" />
+                  <AlertDescription className="text-secondary-foreground">
+                    Invite link created successfully!
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Share this link:</label>
+                  <div className="flex gap-2">
+                    <Input value={inviteUrl} readOnly className="font-mono text-sm" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopy}
+                      className="shrink-0 bg-transparent"
+                      title="Copy link"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted rounded text-sm text-muted-foreground">
+                  <p className="font-medium mb-1">Link expires in:</p>
+                  <p>24 hours</p>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full bg-transparent"
+                  onClick={() => {
+                    setInviteUrl(null)
+                    setCopied(false)
+                  }}
+                >
+                  Create Another
+                </Button>
+              </div>
+            )}
+
+            <div className="text-center text-sm">
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Back to Login
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  );
+  )
 }

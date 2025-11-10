@@ -1,14 +1,54 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
+
+export async function GET() {
+  try {
+    const user = await getSessionUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const currentUserId = user.id;
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        lists: {
+          include: {
+            items: {
+              select: {
+                id: true,
+                title: true,
+                purchased: true,
+                purchasedBy: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ users, currentUserId });
+  } catch (error) {
+    console.error('Failed to fetch lists:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch lists' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const userId = cookieStore.get('session')?.value;
-    if (!userId) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const userId = user.id;
 
     const { items } = await request.json();
     if (!Array.isArray(items) || items.length === 0) {
