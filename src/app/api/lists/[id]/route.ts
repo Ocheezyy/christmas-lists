@@ -33,8 +33,17 @@ export async function GET(
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
+    // If viewing own list, remove purchase information
+    const sanitizedList = list.userId === user.id 
+      ? {
+          ...list,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+          items: list.items.map(({ purchased, purchasedBy, ...item }: any) => item)
+        }
+      : list;
+
     return NextResponse.json({
-      list,
+      list: sanitizedList,
       currentUserId: user.id,
     });
   } catch (error) {

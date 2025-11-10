@@ -6,25 +6,39 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Gift, Plus, LogOut } from "lucide-react"
+import { UserMenu } from "@/components/user-menu"
+import { Gift, Plus } from "lucide-react"
 import { UserWithLists } from "@/types/user"
 
 export default function HomePage() {
   const [users, setUsers] = useState<UserWithLists[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (retryCount = 0) => {
       try {
         const response = await fetch('/api/lists')
+        
+        // Handle 401 with retry logic (race condition on initial login)
+        if (response.status === 401 && retryCount < 3) {
+          // Wait a bit for session cookie to be set, then retry
+          await new Promise(resolve => setTimeout(resolve, 200 * (retryCount + 1)))
+          return fetchData(retryCount + 1)
+        }
+        
         if (!response.ok) {
           throw new Error('Failed to fetch lists')
         }
+        
         const data = await response.json()
         setUsers(data.users || [])
         setCurrentUserId(data.currentUserId || null)
+        // Find current user's name
+        const currentUser = data.users?.find((u: UserWithLists) => u.id === data.currentUserId)
+        setCurrentUserName(currentUser?.name || "User")
         setLoading(false)
       } catch {
         setError("Failed to load lists")
@@ -34,15 +48,6 @@ export default function HomePage() {
 
     fetchData()
   }, [])
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      window.location.href = "/login"
-    } catch {
-      alert("Failed to logout")
-    }
-  }
 
   if (loading) {
     return (
@@ -110,9 +115,7 @@ export default function HomePage() {
               </Button>
             </Link>
             <ThemeToggle />
-            <Button variant="outline" size="icon" onClick={handleLogout} title="Logout">
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <UserMenu userName={currentUserName} />
           </div>
         </div>
       </header>

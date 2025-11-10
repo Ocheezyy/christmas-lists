@@ -17,13 +17,19 @@ export async function GET() {
         id: true,
         name: true,
         lists: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            userId: true,
+            createdAt: true,
+            updatedAt: true,
             items: {
               select: {
                 id: true,
                 title: true,
                 purchased: true,
                 purchasedBy: true,
+                priority: true,
               },
             },
           },
@@ -31,7 +37,27 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ users, currentUserId });
+    // Remove purchase information from current user's own lists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sanitizedUsers = users.map((u: any) => ({
+      ...u,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lists: u.lists.map((list: any) => ({
+        ...list,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items: list.items.map((item: any) => {
+          if (u.id === currentUserId) {
+            // Remove purchase info from own lists
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { purchased, purchasedBy, ...rest } = item;
+            return rest;
+          }
+          return item;
+        })
+      }))
+    }));
+
+    return NextResponse.json({ users: sanitizedUsers, currentUserId });
   } catch (error) {
     console.error('Failed to fetch lists:', error);
     return NextResponse.json(
