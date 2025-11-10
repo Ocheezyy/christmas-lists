@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Item {
@@ -19,8 +19,8 @@ interface List {
   items: Item[];
 }
 
-export default function SharePage({ params }: { params: { token: string } }) {
-  const { token } = params;
+export default function SharePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const [list, setList] = useState<List | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

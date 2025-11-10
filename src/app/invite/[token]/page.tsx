@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
 
-export default function InvitePage({ params }: { params: { token: string } }) {
+export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
       const optionsRes = await fetch('/api/auth/register/options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, inviteToken: params.token }),
+        body: JSON.stringify({ name, inviteToken: token }),
       });
 
       if (!optionsRes.ok) {

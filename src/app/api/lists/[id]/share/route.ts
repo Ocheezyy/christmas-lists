@@ -3,8 +3,9 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { randomBytes } from 'crypto';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const cookieStore = await cookies();
     const currentUserId = cookieStore.get('session')?.value;
     if (!currentUserId) {
@@ -12,7 +13,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     // Verify list exists and current user is the owner
-    const list = await prisma.list.findUnique({ where: { id: params.id } });
+    const list = await prisma.list.findUnique({ where: { id } });
     if (!list) return NextResponse.json({ error: 'List not found' }, { status: 404 });
     if (list.userId !== currentUserId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -25,7 +26,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const share = await prisma.shareLink.create({
       data: {
         token,
-        listId: params.id,
+        listId: id,
         createdBy: currentUserId,
         expiresAt,
       },

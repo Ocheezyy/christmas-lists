@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
   try {
+    const { id } = await params;
     const cookieStore = await cookies();
     const currentUserId = cookieStore.get('session')?.value;
     
@@ -15,7 +16,7 @@ export async function GET(
     }
 
     const list = await prisma.list.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -43,9 +44,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string; itemId: string } }
+  { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
   try {
+    const { id, itemId } = await params;
     const cookieStore = await cookies();
     const currentUserId = cookieStore.get('session')?.value;
     
@@ -57,7 +59,7 @@ export async function PATCH(
 
     // Find the list and check if the current user owns it
     const list = await prisma.list.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { userId: true },
     });
 
@@ -75,7 +77,7 @@ export async function PATCH(
 
     // Update the item
     const item = await prisma.item.update({
-      where: { id: params.itemId },
+      where: { id: itemId },
       data: {
         purchased,
         purchasedBy: purchased ? currentUserId : null,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Item {
@@ -21,7 +21,8 @@ interface List {
   items: Item[];
 }
 
-export default function ListPage({ params }: { params: { id: string } }) {
+export default function ListPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [list, setList] = useState<List | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,26 +33,26 @@ export default function ListPage({ params }: { params: { id: string } }) {
     // Fetch list data
     const fetchList = async () => {
       try {
-        const response = await fetch(`/api/lists/${params.id}`);
+        const response = await fetch(`/api/lists/${id}`);
         if (!response.ok) {
           throw new Error('Failed to load list');
         }
         const data = await response.json();
         setList(data.list);
         setCurrentUserId(data.currentUserId);
-      } catch (err) {
-        setError('Failed to load the list. Please try again later.');
+      } catch {
+        setError('Failed to load list');
       } finally {
         setLoading(false);
       }
     };
 
     fetchList();
-  }, [params.id]);
+  }, [id]);
 
   const handlePurchaseToggle = async (itemId: string, currentlyPurchased: boolean) => {
     try {
-      const response = await fetch(`/api/lists/${params.id}/items/${itemId}`, {
+      const response = await fetch(`/api/lists/${id}/items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ purchased: !currentlyPurchased }),
@@ -78,7 +79,7 @@ export default function ListPage({ params }: { params: { id: string } }) {
           ),
         };
       });
-    } catch (err) {
+    } catch {
       alert('Failed to update item. Please try again.');
     }
   };
@@ -126,7 +127,7 @@ export default function ListPage({ params }: { params: { id: string } }) {
               if (shareLoading) return;
               setShareLoading(true);
               try {
-                const res = await fetch(`/api/lists/${params.id}/share`, { method: 'POST' });
+                const res = await fetch(`/api/lists/${id}/share`, { method: 'POST' });
                 if (!res.ok) {
                   const json = await res.json();
                   throw new Error(json?.error || 'Failed to create share link');

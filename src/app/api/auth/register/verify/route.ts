@@ -26,11 +26,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clear the invite token
-    await prisma.user.update({
+    // The user was already created by verifyReg in webauthn.ts
+    // Now just clear the invite token from the placeholder user if it exists
+    const placeholderUser = await prisma.user.findUnique({
       where: { inviteToken },
-      data: { inviteToken: null, inviteExpires: null }
     });
+
+    if (placeholderUser && placeholderUser.credentialId.startsWith('placeholder-')) {
+      // Delete the placeholder user since we created a real one
+      await prisma.user.delete({
+        where: { id: placeholderUser.id },
+      });
+    }
 
     // Clear registration cookie
     cookieStore.delete('registration');

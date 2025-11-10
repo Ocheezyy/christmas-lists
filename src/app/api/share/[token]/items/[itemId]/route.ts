@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function PATCH(request: Request, { params }: { params: { token: string; itemId: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ token: string; itemId: string }> }) {
   try {
-    const { token, itemId } = params;
+    const { token, itemId } = await params;
 
     const share = await prisma.shareLink.findUnique({ where: { token } });
     if (!share) return NextResponse.json({ error: 'Share link not found' }, { status: 404 });
