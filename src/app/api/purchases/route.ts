@@ -21,6 +21,7 @@ export async function GET() {
         title: true,
         description: true,
         url: true,
+        imageUrl: true,
         priority: true,
         list: {
           select: {

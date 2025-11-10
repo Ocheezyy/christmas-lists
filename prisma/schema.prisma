@@ -46,6 +46,7 @@ model Item {
   title       String
   description String
   url         String?
+  imageUrl    String?
   purchased   Boolean @default(false)
   purchasedBy String?
   priority    Int     @default(0) // 0 = none, 1 = low, 2 = medium, 3 = high

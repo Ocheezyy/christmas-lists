@@ -13,16 +13,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     
     const currentUserId = user.id;
 
-    // Verify list exists and current user is the owner
+    // Verify list exists
     const list = await prisma.list.findUnique({ where: { id } });
     if (!list) return NextResponse.json({ error: 'List not found' }, { status: 404 });
-    if (list.userId !== currentUserId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
 
-    // Create a token and a ShareLink record
+    // Create a token and a ShareLink record (no expiration)
     const token = randomBytes(16).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years (effectively no expiration)
 
     const share = await prisma.shareLink.create({
       data: {
@@ -33,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
 
-    return NextResponse.json({ token: share.token, expiresAt: share.expiresAt });
+    return NextResponse.json({ token: share.token });
   } catch (error) {
     console.error('Failed to create share link:', error);
     return NextResponse.json({ error: 'Failed to create share link' }, { status: 500 });

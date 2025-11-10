@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Item, ItemGroup, ItemContent, ItemTitle, ItemDescription, ItemActions, ItemHeader } from "@/components/ui/item"
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
@@ -19,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Trash2, Plus, Save, ExternalLink, ArrowLeft } from "lucide-react"
+import { Trash2, Plus, Save, ExternalLink, ArrowLeft, Sparkles } from "lucide-react"
 import Link from "next/link"
 
 interface ListItem {
@@ -28,6 +29,7 @@ interface ListItem {
   description: string
   url: string
   priority: number // 0 = none, 1 = low, 2 = medium, 3 = high
+  imageUrl?: string
 }
 
 export default function EditListPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +41,15 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
   const [isLoading, setIsLoading] = useState(true)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
+  const [fetchingUrl, setFetchingUrl] = useState<number | null>(null)
+  const [overwriteDialog, setOverwriteDialog] = useState<{
+    index: number
+    data: { title: string; description: string; image?: string }
+    hasTitle: boolean
+    hasDescription: boolean
+  } | null>(null)
+  const [updateTitle, setUpdateTitle] = useState(true)
+  const [updateDescription, setUpdateDescription] = useState(true)
 
   useEffect(() => {
     const fetchList = async () => {
@@ -125,6 +136,82 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
   const updateItem = (index: number, field: keyof ListItem, value: string | number) => {
     const newItems = items.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     setItems(newItems)
+  }
+
+  const fetchUrlDetails = async (index: number) => {
+    const item = items[index]
+    if (!item.url.trim()) {
+      toast.error("Please enter a URL first")
+      return
+    }
+
+    setFetchingUrl(index)
+    try {
+      const response = await fetch("/api/url-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: item.url.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch URL details")
+      }
+
+      const data = await response.json()
+      
+      // Check if title or description would be overwritten
+      const hasExistingTitle = item.title.trim() !== ""
+      const hasExistingDescription = item.description.trim() !== ""
+      
+      if (hasExistingTitle || hasExistingDescription) {
+        // Show confirmation dialog
+        setOverwriteDialog({
+          index,
+          data,
+          hasTitle: hasExistingTitle,
+          hasDescription: hasExistingDescription,
+        })
+        setUpdateTitle(true)
+        setUpdateDescription(true)
+        setFetchingUrl(null)
+      } else {
+        // No existing data, update directly
+        applyFetchedData(index, data, true, true)
+        toast.success("Details fetched successfully!")
+        setFetchingUrl(null)
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to fetch URL details")
+      setFetchingUrl(null)
+    }
+  }
+
+  const applyFetchedData = (
+    index: number,
+    data: { title: string; description: string; image?: string },
+    shouldUpdateTitle: boolean,
+    shouldUpdateDescription: boolean
+  ) => {
+    const newItems = items.map((it, i) => {
+      if (i === index) {
+        return {
+          ...it,
+          title: shouldUpdateTitle ? (data.title || it.title) : it.title,
+          description: shouldUpdateDescription ? (data.description || it.description) : it.description,
+          imageUrl: data.image || it.imageUrl,
+        }
+      }
+      return it
+    })
+    setItems(newItems)
+  }
+
+  const handleConfirmOverwrite = () => {
+    if (overwriteDialog) {
+      applyFetchedData(overwriteDialog.index, overwriteDialog.data, updateTitle, updateDescription)
+      toast.success("Details updated successfully!")
+      setOverwriteDialog(null)
+    }
   }
 
   const addItem = () => {
@@ -240,13 +327,26 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
                             <label htmlFor={`url-${index}`} className="text-xs font-medium mb-2 block">
                               URL (optional)
                             </label>
-                            <Input
-                              type="url"
-                              id={`url-${index}`}
-                              value={item.url}
-                              onChange={(e) => updateItem(index, "url", e.target.value)}
-                              placeholder="https://example.com"
-                            />
+                            <div className="flex gap-2">
+                              <Input
+                                type="url"
+                                id={`url-${index}`}
+                                value={item.url}
+                                onChange={(e) => updateItem(index, "url", e.target.value)}
+                                placeholder="https://example.com"
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => fetchUrlDetails(index)}
+                                disabled={!item.url.trim() || fetchingUrl === index}
+                                title="Auto-fetch title and description"
+                              >
+                                <Sparkles className={`h-4 w-4 ${fetchingUrl === index ? "animate-spin" : ""}`} />
+                              </Button>
+                            </div>
                           </div>
                           <div>
                             <label className="text-xs font-medium mb-2 block">Priority</label>
@@ -379,6 +479,69 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Overwrite Confirmation Dialog */}
+        <AlertDialog open={overwriteDialog !== null} onOpenChange={(open) => !open && setOverwriteDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Update with fetched details?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Some fields already have content. Select which fields you want to update:
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-4 py-4">
+              {overwriteDialog?.hasTitle && (
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="update-title"
+                    checked={updateTitle}
+                    onChange={(e) => setUpdateTitle((e.target as HTMLInputElement).checked)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="update-title"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Update title
+                    </label>
+                    <p className="text-sm text-muted-foreground">
+                      Current: &quot;{items[overwriteDialog.index]?.title}&quot; → New: &quot;{overwriteDialog.data.title}&quot;
+                    </p>
+                  </div>
+                </div>
+              )}
+              {overwriteDialog?.hasDescription && (
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="update-description"
+                    checked={updateDescription}
+                    onChange={(e) => setUpdateDescription((e.target as HTMLInputElement).checked)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="update-description"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Update description
+                    </label>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      Current: &quot;{items[overwriteDialog.index]?.description}&quot;
+                    </p>
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Note: The image will always be updated if available.
+              </p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmOverwrite}>
+                Update
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

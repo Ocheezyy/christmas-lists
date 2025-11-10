@@ -94,6 +94,7 @@ export async function POST(request: Request) {
             title: item.title,
             description: item.description,
             url: item.url || null,
+            imageUrl: item.imageUrl || null,
             priority: item.priority || 0,
           })),
         },

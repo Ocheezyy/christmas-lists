@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ token: string; itemId: string }> }) {
   try {
     const { token, itemId } = await params;
+
+    // Require authentication for purchasing
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized', requiresAuth: true }, { status: 401 });
+    }
 
     const share = await prisma.shareLink.findUnique({ where: { token } });
     if (!share) return NextResponse.json({ error: 'Share link not found' }, { status: 404 });
@@ -21,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ to
       where: { id: itemId },
       data: {
         purchased,
-        purchasedBy: purchased ? `share:${token}` : null,
+        purchasedBy: purchased ? user.id : null,
       },
     });
 

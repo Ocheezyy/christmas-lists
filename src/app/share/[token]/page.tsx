@@ -2,28 +2,21 @@
 
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Share2, ExternalLink, Check, Gift, Home, AlertTriangle } from "lucide-react"
+import { Share2, ExternalLink, Gift, Home } from "lucide-react"
 
 interface Item {
   id: string;
   title: string;
   description: string;
   url?: string;
+  imageUrl?: string;
   purchased: boolean;
   purchasedBy?: string | null;
+  purchaserName?: string;
   priority: number;
 }
 
@@ -39,8 +32,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   const [list, setList] = useState<List | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [processing, setProcessing] = useState<string | null>(null)
-  const [duplicateWarning, setDuplicateWarning] = useState<{ itemId: string; itemTitle: string } | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
     const fetchList = async () => {
@@ -59,48 +51,28 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       }
     }
 
+    // Check authentication status
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/profile')
+        setIsAuthenticated(res.ok)
+      } catch {
+        setIsAuthenticated(false)
+      }
+    }
+
     fetchList()
+    checkAuth()
   }, [token])
 
-  const togglePurchase = async (itemId: string, currentlyPurchased: boolean, bypassWarning = false) => {
-    // Check for duplicate purchase attempt
-    if (!bypassWarning && !currentlyPurchased) {
-      const item = list?.items.find((i) => i.id === itemId)
-      if (item?.purchased && item.purchasedBy && item.purchasedBy !== `share:${token}`) {
-        setDuplicateWarning({ itemId, itemTitle: item.title })
-        return
-      }
-    }
-
-    setProcessing(itemId)
-    try {
-      const res = await fetch(`/api/share/${token}/items/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ purchased: !currentlyPurchased }),
-      })
-
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json?.error || "Failed to update")
-      }
-
-      const { item } = await res.json()
-      setList((prev) => {
-        if (!prev) return prev
-        return { ...prev, items: prev.items.map((i) => (i.id === item.id ? item : i)) }
-      })
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update item")
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  const confirmDuplicatePurchase = async () => {
-    if (duplicateWarning) {
-      await togglePurchase(duplicateWarning.itemId, false, true)
-      setDuplicateWarning(null)
+  const handleViewList = () => {
+    if (!list) return
+    
+    if (!isAuthenticated) {
+      sessionStorage.setItem('returnToList', list.id)
+      window.location.href = '/login'
+    } else {
+      window.location.href = `/list/${list.id}`
     }
   }
 
@@ -156,7 +128,6 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   }
 
   const visibleItems = list.items
-    .filter((item) => !item.purchased || item.purchasedBy === `share:${token}`)
     .sort((a, b) => b.priority - a.priority) // Sort by priority (high to low)
 
   return (
@@ -182,6 +153,32 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
         </div>
       </header>
 
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-b">
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-semibold">Want to mark items as purchased?</h2>
+            <p className="text-muted-foreground">
+              {isAuthenticated 
+                ? "Go to the full list to purchase items and keep track of what's been bought."
+                : "Login to access the full list where you can purchase items and see what others have bought."}
+            </p>
+            <div className="flex gap-3 justify-center">
+              {!isAuthenticated && (
+                <Button onClick={handleViewList} size="lg" className="gap-2">
+                  Login to View Full List
+                </Button>
+              )}
+              {isAuthenticated && (
+                <Button onClick={handleViewList} size="lg" className="gap-2">
+                  View Full List
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <main className="max-w-3xl mx-auto px-4 py-8">
         {visibleItems.length === 0 ? (
           <Card>
@@ -199,6 +196,17 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
               >
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between gap-4">
+                    {item.imageUrl && (
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.title}
+                          width={96}
+                          height={96}
+                          className="w-24 h-24 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <h3
@@ -221,15 +229,9 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
                             {item.priority === 1 ? "Low" : item.priority === 2 ? "Medium" : "High"}
                           </Badge>
                         )}
-                        {item.purchased && (
-                          <Badge variant="secondary" className="gap-1">
-                            <Check className="w-3 h-3" />
-                            Purchased
-                          </Badge>
-                        )}
                       </div>
                       {item.description && (
-                        <p className={`${item.purchased ? "text-muted-foreground" : "text-foreground/70"}`}>
+                        <p className="text-foreground/70">
                           {item.description}
                         </p>
                       )}
@@ -242,29 +244,6 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
                         </Link>
                       )}
                     </div>
-                    <Button
-                      onClick={() => togglePurchase(item.id, item.purchased)}
-                      disabled={processing === item.id}
-                      variant={item.purchased ? "outline" : "default"}
-                      className="gap-2 whitespace-nowrap"
-                    >
-                      {processing === item.id ? (
-                        <>
-                          <span className="inline-block animate-spin">⟳</span>
-                          Updating…
-                        </>
-                      ) : item.purchased ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Unpurchase
-                        </>
-                      ) : (
-                        <>
-                          <Gift className="w-4 h-4" />
-                          Purchase
-                        </>
-                      )}
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -272,28 +251,6 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
           </div>
         )}
       </main>
-
-      {/* Duplicate Purchase Warning Dialog */}
-      <AlertDialog open={duplicateWarning !== null} onOpenChange={(open) => !open && setDuplicateWarning(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              Item Already Purchased
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              The item &quot;{duplicateWarning?.itemTitle}&quot; has already been marked as purchased by someone else. 
-              Are you sure you want to purchase this item as well?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDuplicatePurchase}>
-              Purchase Anyway
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

@@ -128,7 +128,7 @@ export default function AdminInvitePage() {
 
                 <div className="p-3 bg-muted rounded text-sm text-muted-foreground">
                   <p className="font-medium mb-1">Link expires in:</p>
-                  <p>24 hours</p>
+                  <p>48 hours</p>
                 </div>
 
                 <Button

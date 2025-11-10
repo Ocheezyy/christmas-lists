@@ -2,9 +2,11 @@
 
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,15 +17,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Share2, ExternalLink, Check, Gift, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Share2, ExternalLink, Check, Gift, AlertTriangle, Copy } from "lucide-react"
 
 interface Item {
   id: string
   title: string
   description: string
   url?: string
+  imageUrl?: string
   purchased: boolean
   purchasedBy?: string
+  purchaserName?: string
   priority: number
 }
 
@@ -43,8 +47,11 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [shareLoading, setShareLoading] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [updatingItem, setUpdatingItem] = useState<string | null>(null)
   const [duplicateWarning, setDuplicateWarning] = useState<{ itemId: string; itemTitle: string } | null>(null)
+  const [unpurchaseWarning, setUnpurchaseWarning] = useState<{ itemId: string; itemTitle: string } | null>(null)
 
   useEffect(() => {
     const fetchList = async () => {
@@ -67,6 +74,15 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   }, [id])
 
   const handlePurchaseToggle = async (itemId: string, currentlyPurchased: boolean, bypassWarning = false) => {
+    // Check for unpurchase confirmation
+    if (!bypassWarning && currentlyPurchased) {
+      const item = list?.items.find((i) => i.id === itemId)
+      if (item && item.purchasedBy === currentUserId) {
+        setUnpurchaseWarning({ itemId, itemTitle: item.title })
+        return
+      }
+    }
+
     // Check for duplicate purchase attempt
     if (!bypassWarning && !currentlyPurchased) {
       const item = list?.items.find((i) => i.id === itemId)
@@ -127,23 +143,23 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       }
       const { token } = await res.json()
       const origin = typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_ORIGIN || ""
-      const shareUrl = `${origin}/share/${token}`
-
-      if (navigator.share) {
-        try {
-          await navigator.share({ title: `${list?.user.name}'s list`, url: shareUrl })
-          return
-        } catch {
-          // fallback to clipboard
-        }
-      }
-
-      await navigator.clipboard.writeText(shareUrl)
-      alert("Share link copied to clipboard")
+      const url = `${origin}/share/${token}`
+      setShareUrl(url)
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create share link")
     } finally {
       setShareLoading(false)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      alert("Failed to copy link")
     }
   }
 
@@ -210,12 +226,10 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                   </Button>
                 </Link>
               )}
-              {!isOwnList && (
-                <Button onClick={handleShare} disabled={shareLoading} className="gap-2">
-                  <Share2 className="w-4 h-4" />
-                  {shareLoading ? "Creating…" : "Share List"}
-                </Button>
-              )}
+              <Button onClick={handleShare} disabled={shareLoading} className="gap-2">
+                <Share2 className="w-4 h-4" />
+                {shareLoading ? "Creating…" : "Share List"}
+              </Button>
             </div>
           </div>
         </div>
@@ -238,6 +252,17 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
               >
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between gap-4">
+                    {item.imageUrl && (
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.title}
+                          width={96}
+                          height={96}
+                          className="w-24 h-24 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <h3
@@ -267,6 +292,11 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                           </Badge>
                         )}
                       </div>
+                      {!isOwnList && item.purchased && item.purchaserName && (
+                        <p className="text-sm text-muted-foreground">
+                          Purchased by {item.purchaserName}
+                        </p>
+                      )}
                       {item.description && (
                         <p className={`${item.purchased ? "text-muted-foreground" : "text-foreground/70"}`}>
                           {item.description}
@@ -285,7 +315,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                       <Button
                         onClick={() => handlePurchaseToggle(item.id, item.purchased)}
                         disabled={updatingItem === item.id}
-                        variant={item.purchased ? "outline" : "default"}
+                        variant={item.purchased ? "destructive" : "default"}
                         className="gap-2 whitespace-nowrap"
                       >
                         {updatingItem === item.id ? (
@@ -316,6 +346,32 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         )}
       </main>
 
+      {/* Unpurchase Confirmation Dialog */}
+      <AlertDialog open={unpurchaseWarning !== null} onOpenChange={(open) => !open && setUnpurchaseWarning(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unpurchase Item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unpurchase &quot;{unpurchaseWarning?.itemTitle}&quot;? This will make it available for purchase again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (unpurchaseWarning) {
+                  handlePurchaseToggle(unpurchaseWarning.itemId, true, true)
+                  setUnpurchaseWarning(null)
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Unpurchase
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Duplicate Purchase Warning Dialog */}
       <AlertDialog open={duplicateWarning !== null} onOpenChange={(open) => !open && setDuplicateWarning(null)}>
         <AlertDialogContent>
@@ -333,6 +389,43 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDuplicatePurchase}>
               Purchase Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Share Link Dialog */}
+      <AlertDialog open={shareUrl !== null} onOpenChange={(open) => !open && setShareUrl(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Share List</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anyone with this link can view and purchase items from this list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Share this link:</label>
+              <div className="flex gap-2">
+                <Input value={shareUrl || ""} readOnly className="font-mono text-sm" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyLink}
+                  className="shrink-0"
+                  title="Copy link"
+                >
+                  {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="p-3 bg-muted rounded text-sm text-muted-foreground">
+              <p>This link can be shared with anyone and does not expire.</p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShareUrl(null)}>
+              Done
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

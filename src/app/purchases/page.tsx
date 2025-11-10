@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +15,7 @@ interface PurchasedItem {
   title: string
   description: string
   url: string | null
+  imageUrl: string | null
   priority: number
   list: {
     id: string
@@ -154,6 +156,17 @@ export default function MyPurchasesPage() {
               return (
                 <Card key={item.id} className="hover:shadow-lg transition-shadow flex flex-col">
                   <CardHeader>
+                    {item.imageUrl && (
+                      <div className="mb-4">
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.title}
+                          width={400}
+                          height={200}
+                          className="w-full h-40 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <CardTitle className="line-clamp-2">{item.title}</CardTitle>
                       <CardDescription className="line-clamp-3">
@@ -202,7 +215,7 @@ export default function MyPurchasesPage() {
                         </a>
                       )}
                       <Link href={`/list/${item.list.id}`} className="block">
-                        <Button variant="outline" className="w-full">
+                        <Button variant="default" className="w-full">
                           View List
                         </Button>
                       </Link>

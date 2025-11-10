@@ -38,7 +38,20 @@ export default function LoginPage() {
       }
 
       toast.success("Logged in successfully!")
-      window.location.href = "/"
+      
+      // Check if we should redirect to a share link or list
+      const returnToShare = sessionStorage.getItem('returnToShare')
+      const returnToList = sessionStorage.getItem('returnToList')
+      
+      if (returnToShare) {
+        sessionStorage.removeItem('returnToShare')
+        window.location.href = `/share/${returnToShare}`
+      } else if (returnToList) {
+        sessionStorage.removeItem('returnToList')
+        window.location.href = `/list/${returnToList}`
+      } else {
+        window.location.href = "/"
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed")
       setLoading(false)

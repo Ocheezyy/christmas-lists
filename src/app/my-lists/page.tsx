@@ -144,7 +144,7 @@ export default function MyListsPage() {
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map((list) => {
               const totalItems = list.items.length
-              const highPriorityItems = list.items.filter(item => item.priority === 3).length
+            //   const highPriorityItems = list.items.filter(item => item.priority === 3).length
               const createdDate = new Date(list.createdAt).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
@@ -160,7 +160,7 @@ export default function MyListsPage() {
                           {list.name || "Untitled List"}
                         </CardTitle>
                         <CardDescription className="mt-1">
-                          {totalItems} {totalItems === 1 ? "item" : "items"} • {createdDate}
+                          Created At: {createdDate}
                         </CardDescription>
                       </div>
                       <Link href={`/list/edit/${list.id}`}>
@@ -178,11 +178,11 @@ export default function MyListsPage() {
                     </div>
 
                     {/* High Priority Items */}
-                    {highPriorityItems > 0 && (
+                    {/* {highPriorityItems > 0 && (
                       <Badge variant="destructive" className="w-fit">
                         {highPriorityItems} high priority
                       </Badge>
-                    )}
+                    )} */}
 
                     {/* View List Button */}
                     <Link href={`/list/${list.id}`} className="block">

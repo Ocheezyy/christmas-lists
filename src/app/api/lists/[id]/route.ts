@@ -33,14 +33,34 @@ export async function GET(
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
+    // Fetch purchaser information for items
+    const itemsWithPurchaserInfo = await Promise.all(
+      list.items.map(async (item: { purchased: boolean; purchasedBy: string | null; [key: string]: unknown }) => {
+        if (item.purchased && item.purchasedBy) {
+          const purchaser = await prisma.user.findUnique({
+            where: { id: item.purchasedBy },
+            select: { name: true },
+          });
+          return {
+            ...item,
+            purchaserName: purchaser?.name || 'Unknown',
+          };
+        }
+        return item;
+      })
+    );
+
     // If viewing own list, remove purchase information
     const sanitizedList = list.userId === user.id 
       ? {
           ...list,
           // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-          items: list.items.map(({ purchased, purchasedBy, ...item }: any) => item)
+          items: itemsWithPurchaserInfo.map(({ purchased, purchasedBy, purchaserName, ...item }: any) => item)
         }
-      : list;
+      : {
+          ...list,
+          items: itemsWithPurchaserInfo,
+        };
 
     return NextResponse.json({
       list: sanitizedList,
@@ -108,6 +128,7 @@ export async function PUT(
             title: item.title,
             description: item.description || null,
             url: item.url || null,
+            imageUrl: item.imageUrl || null,
             priority: item.priority || 0,
           })),
         },
