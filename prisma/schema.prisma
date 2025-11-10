@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String // "Mom", "Dad", etc.
+  credentialId  String    @unique
+  publicKey     Bytes
+  transports    String? // JSON string
+  counter       BigInt    @default(0) // For WebAuthn replay protection
+  createdAt     DateTime  @default(now())
+  inviteToken   String?   @unique
+  inviteExpires DateTime?
+  isAdmin       Boolean   @default(false)
+  lists         List[]
+}
+
+model List {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  items      Item[]
+  shareLinks ShareLink[]
+}
+
+model Item {
+  id          String  @id @default(cuid())
+  listId      String
+  list        List    @relation(fields: [listId], references: [id])
+  title       String
+  description String
+  url         String?
+  purchased   Boolean @default(false)
+  purchasedBy String?
+}
+
+// Temporary share links for lists. A link allows anyone with the token
+// to view the list without signing in until it expires.
+model ShareLink {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  listId    String
+  list      List     @relation(fields: [listId], references: [id])
+  createdBy String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
