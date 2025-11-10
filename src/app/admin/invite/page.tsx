@@ -23,12 +23,13 @@ export default function AdminInvitePage() {
 
     const formData = new FormData(e.currentTarget)
     const name = formData.get("name") as string
+    const adminSecret = formData.get("adminSecret") as string
 
     try {
       const response = await fetch("/api/admin/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, adminSecret }),
       })
 
       if (!response.ok) {
@@ -82,6 +83,20 @@ export default function AdminInvitePage() {
 
             {!inviteUrl ? (
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="adminSecret" className="text-sm font-medium">
+                    Admin Secret Key
+                  </label>
+                  <Input 
+                    id="adminSecret" 
+                    name="adminSecret" 
+                    type="password" 
+                    placeholder="Enter admin secret" 
+                    required 
+                    disabled={loading} 
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
                     Family Member Name

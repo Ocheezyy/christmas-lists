@@ -4,7 +4,23 @@ import { nanoid } from 'nanoid';
 
 export async function POST(req: Request) {
   try {
-    const { name } = await req.json();
+    const { name, adminSecret } = await req.json();
+
+    // Verify admin secret
+    const expectedSecret = process.env.ADMIN_SECRET;
+    if (!expectedSecret) {
+      return NextResponse.json(
+        { error: 'Admin secret not configured' },
+        { status: 500 }
+      );
+    }
+
+    if (adminSecret !== expectedSecret) {
+      return NextResponse.json(
+        { error: 'Invalid admin secret' },
+        { status: 403 }
+      );
+    }
 
     if (!name) {
       return NextResponse.json(

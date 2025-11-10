@@ -8,6 +8,7 @@ export async function middleware(request: NextRequest) {
   // Allow access to auth endpoints and invite pages
   if (
     request.nextUrl.pathname.startsWith('/api/auth') ||
+    request.nextUrl.pathname.startsWith('/api/admin') ||
     request.nextUrl.pathname.startsWith('/api/share') ||
     request.nextUrl.pathname.startsWith('/invite') ||
     request.nextUrl.pathname.startsWith('/admin') ||
