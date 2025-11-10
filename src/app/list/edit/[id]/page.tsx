@@ -91,6 +91,12 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
     setIsSubmitting(true)
 
     try {
+      // Validate list name
+      if (!listName.trim()) {
+        toast.error("Please enter a list name")
+        return
+      }
+
       // Filter out empty items
       const validItems = items.filter((item) => item.title.trim() !== "")
 
@@ -103,7 +109,7 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          name: listName.trim() || null,
+          name: listName.trim(),
           items: validItems 
         }),
       })
@@ -256,7 +262,7 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
             <CardContent className="pt-6">
               <div>
                 <label htmlFor="list-name" className="text-sm font-medium mb-2 block">
-                  List Name (optional)
+                  List Name *
                 </label>
                 <Input
                   type="text"
@@ -265,6 +271,7 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
                   onChange={(e) => setListName(e.target.value)}
                   placeholder="e.g., Christmas 2025, Birthday Wishes..."
                   className="text-base"
+                  required
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   Give your list a name to help identify it

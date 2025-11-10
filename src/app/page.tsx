@@ -105,7 +105,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Gift className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Family Christmas Lists</h1>
+            <h1 className="text-2xl font-bold text-foreground">Christmas Lists</h1>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/list/new">

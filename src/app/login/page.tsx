@@ -65,7 +65,7 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto">
             <Gift className="w-6 h-6" />
           </div>
-          <h1 className="text-3xl font-bold">Family Christmas Lists</h1>
+          <h1 className="text-3xl font-bold">Christmas Lists</h1>
           <p className="text-muted-foreground">Share your wishlist with loved ones</p>
         </div>
 

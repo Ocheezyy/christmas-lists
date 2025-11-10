@@ -54,6 +54,12 @@ const NewListPage = () => {
     setIsSubmitting(true)
 
     try {
+      // Validate list name
+      if (!listName.trim()) {
+        toast.error("Please enter a list name")
+        return
+      }
+
       // Filter out empty items
       const validItems = items.filter((item) => item.title.trim() !== "")
 
@@ -66,7 +72,7 @@ const NewListPage = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          name: listName.trim() || null,
+          name: listName.trim(),
           items: validItems 
         }),
       })
@@ -208,7 +214,7 @@ const NewListPage = () => {
             <CardContent className="pt-6">
               <div>
                 <label htmlFor="list-name" className="text-sm font-medium mb-2 block">
-                  List Name (optional)
+                  List Name *
                 </label>
                 <Input
                   type="text"
@@ -217,6 +223,8 @@ const NewListPage = () => {
                   onChange={(e) => setListName(e.target.value)}
                   placeholder="e.g., Christmas 2025, Birthday Wishes..."
                   className="text-base"
+                  required
+                  autoFocus
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   Give your list a name to help identify it

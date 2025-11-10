@@ -60,7 +60,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto">
             <Gift className="w-6 h-6" />
           </div>
-          <h1 className="text-3xl font-bold">Join Family Christmas Lists</h1>
+          <h1 className="text-3xl font-bold">Join Christmas Lists</h1>
           <p className="text-muted-foreground">Complete your registration to get started</p>
         </div>
 
