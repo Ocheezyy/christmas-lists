@@ -94,7 +94,7 @@ export default function AdminInvitePage() {
                   <label htmlFor="name" className="text-sm font-medium">
                     Family Member Name
                   </label>
-                  <Input id="name" name="name" type="text" placeholder="e.g., Mom" required disabled={loading} />
+                  <Input id="name" name="name" type="text" placeholder="e.g., Sean" required disabled={loading} />
                 </div>
 
                 <Button type="submit" disabled={loading} size="lg" className="w-full gap-2">
