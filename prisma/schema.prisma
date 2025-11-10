@@ -40,16 +40,17 @@ model List {
 }
 
 model Item {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   listId      String
-  list        List    @relation(fields: [listId], references: [id])
+  list        List     @relation(fields: [listId], references: [id])
   title       String
   description String
   url         String?
   imageUrl    String?
-  purchased   Boolean @default(false)
+  price       Decimal? @db.Decimal(10, 2)
+  purchased   Boolean  @default(false)
   purchasedBy String?
-  priority    Int     @default(0) // 0 = none, 1 = low, 2 = medium, 3 = high
+  priority    Int      @default(0) // 0 = none, 1 = low, 2 = medium, 3 = high
 }
 
 // Temporary share links for lists. A link allows anyone with the token

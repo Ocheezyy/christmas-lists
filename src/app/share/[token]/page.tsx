@@ -14,6 +14,7 @@ interface Item {
   description: string;
   url?: string;
   imageUrl?: string;
+  price?: string;
   purchased: boolean;
   purchasedBy?: string | null;
   purchaserName?: string;
@@ -233,6 +234,11 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
                       {item.description && (
                         <p className="text-foreground/70">
                           {item.description}
+                        </p>
+                      )}
+                      {item.price && (
+                        <p className="text-lg font-semibold text-foreground">
+                          ${Number(item.price).toFixed(2)}
                         </p>
                       )}
                       {item.url && (

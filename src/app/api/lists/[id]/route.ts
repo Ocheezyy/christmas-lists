@@ -129,6 +129,7 @@ export async function PUT(
             description: item.description || null,
             url: item.url || null,
             imageUrl: item.imageUrl || null,
+            price: item.price ? parseFloat(item.price) : null,
             priority: item.priority || 0,
           })),
         },

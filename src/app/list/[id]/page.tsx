@@ -25,6 +25,7 @@ interface Item {
   description: string
   url?: string
   imageUrl?: string
+  price?: string
   purchased: boolean
   purchasedBy?: string
   purchaserName?: string
@@ -300,6 +301,11 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                       {item.description && (
                         <p className={`${item.purchased ? "text-muted-foreground" : "text-foreground/70"}`}>
                           {item.description}
+                        </p>
+                      )}
+                      {item.price && (
+                        <p className="text-lg font-semibold text-foreground">
+                          ${Number(item.price).toFixed(2)}
                         </p>
                       )}
                       {item.url && (

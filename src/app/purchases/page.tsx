@@ -16,6 +16,7 @@ interface PurchasedItem {
   description: string
   url: string | null
   imageUrl: string | null
+  price?: string
   priority: number
   list: {
     id: string
@@ -172,6 +173,11 @@ export default function MyPurchasesPage() {
                       <CardDescription className="line-clamp-3">
                         {item.description}
                       </CardDescription>
+                      {item.price && (
+                        <p className="text-lg font-semibold text-foreground">
+                          ${Number(item.price).toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   </CardHeader>
                   

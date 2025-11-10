@@ -27,6 +27,7 @@ interface ListItem {
   title: string
   description: string
   url: string
+  price: string
   priority: number // 0 = none, 1 = low, 2 = medium, 3 = high
   imageUrl?: string
 }
@@ -34,7 +35,7 @@ interface ListItem {
 const NewListPage = () => {
   const router = useRouter()
   const [listName, setListName] = useState("")
-  const [items, setItems] = useState<ListItem[]>([{ title: "", description: "", url: "", priority: 0 }])
+  const [items, setItems] = useState<ListItem[]>([{ title: "", description: "", url: "", price: "", priority: 0 }])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(0)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
@@ -179,7 +180,7 @@ const NewListPage = () => {
   }
 
   const addItem = () => {
-    setItems([...items, { title: "", description: "", url: "", priority: 0 }])
+    setItems([...items, { title: "", description: "", url: "", price: "", priority: 0 }])
     setEditingIndex(items.length)
   }
 
@@ -306,6 +307,27 @@ const NewListPage = () => {
                             </div>
                           </div>
                           <div>
+                            <label htmlFor={`price-${index}`} className="text-xs font-medium mb-2 block">
+                              Price (optional)
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                              <Input
+                                type="text"
+                                id={`price-${index}`}
+                                value={item.price}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^\d.]/g, '')
+                                  if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                    updateItem(index, "price", value)
+                                  }
+                                }}
+                                placeholder="0.00"
+                                className="pl-7"
+                              />
+                            </div>
+                          </div>
+                          <div>
                             <label className="text-xs font-medium mb-2 block">Priority</label>
                             <div className="flex gap-2">
                               {[
@@ -376,12 +398,19 @@ const NewListPage = () => {
                             )}
                           </ItemHeader>
                           {item.description && <ItemDescription>{item.description}</ItemDescription>}
-                          {item.url && (
-                            <div className="flex items-center gap-1 text-xs text-primary mt-2">
-                              <ExternalLink className="w-3 h-4" />
-                              <span className="truncate">{item.url}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-4 mt-2">
+                            {item.price && (
+                              <div className="text-sm font-medium text-foreground">
+                                ${Number(item.price).toFixed(2)}
+                              </div>
+                            )}
+                            {item.url && (
+                              <div className="flex items-center gap-1 text-xs text-primary">
+                                <ExternalLink className="w-3 h-4" />
+                                <span className="truncate">{item.url}</span>
+                              </div>
+                            )}
+                          </div>
                         </ItemContent>
                         <ItemActions>
                           {items.length > 1 && (
