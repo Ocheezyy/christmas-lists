@@ -3,23 +3,21 @@
 import type React from "react"
 
 import { use, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { startRegistration } from "@simplewebauthn/browser"
-import { Gift, AlertCircle } from "lucide-react"
+import { Gift } from "lucide-react"
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)
   const [name, setName] = useState("")
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError("")
 
     try {
       const optionsRes = await fetch("/api/auth/register/options", {
@@ -47,9 +45,10 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         throw new Error(error)
       }
 
+      toast.success("Registration successful! Redirecting...")
       window.location.href = "/"
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed")
+      toast.error(err instanceof Error ? err.message : "Registration failed")
       setLoading(false)
     }
   }
@@ -72,13 +71,6 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
                   Your Name

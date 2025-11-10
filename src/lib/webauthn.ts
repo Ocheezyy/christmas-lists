@@ -114,7 +114,7 @@ export async function getRegOptions(userId: string, userName: string) {
   return options;
 }
 
-export async function verifyReg(userId: string, response: RegistrationResponseJSON) {
+export async function verifyReg(userId: string, userName: string, response: RegistrationResponseJSON) {
   if (!rpID || !origin) {
     throw new Error("WebAuthn environment not properly configured");
   }
@@ -136,8 +136,8 @@ export async function verifyReg(userId: string, response: RegistrationResponseJS
     await prisma.user.create({
       data: {
         id: userId,
-        name: userId, // Use userId as name since userHandle is not available
-        credentialId: Buffer.from(credential.id).toString("base64"),
+        name: userName,
+        credentialId: credential.id, // Already in base64url format
         publicKey: Buffer.from(credential.publicKey),
         transports: null, // Leave transports null initially
         counter: BigInt(0),
@@ -180,24 +180,17 @@ export async function getAuthOptions(userId?: string) {
   return options;
 }
 
-export async function verifyAuth(response: AuthenticationResponseJSON, userId?: string) {
+export async function verifyAuth(response: AuthenticationResponseJSON, expectedChallenge: string) {
   if (!rpID || !origin) {
     throw new Error("WebAuthn environment not properly configured");
   }
 
+  // response.id is in base64url format, same as what we stored
   const user = await prisma.user.findUnique({
-    where: { credentialId: Buffer.from(response.id, "base64").toString("base64") },
+    where: { credentialId: response.id },
   });
 
   if (!user) throw new Error("User not found");
-
-  // Get the expected challenge from storage if userId is provided
-  let expectedChallenge = response.response.clientDataJSON;
-  if (userId) {
-    const storedChallenge = await verifyChallenge(userId);
-    if (!storedChallenge) throw new Error("Challenge missing or expired");
-    expectedChallenge = storedChallenge;
-  }
 
   const verification = await verifyAuthenticationResponse({
     response,

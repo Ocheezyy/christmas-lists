@@ -14,11 +14,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const { userId, inviteToken } = JSON.parse(registrationCookie.value);
+    const { userId, name, inviteToken } = JSON.parse(registrationCookie.value);
     const response = await req.json();
 
     // Verify the registration
-    const verification = await verifyReg(userId, response);
+    const verification = await verifyReg(userId, name, response);
     if (!verification.verified) {
       return NextResponse.json(
         { error: 'Registration verification failed' },

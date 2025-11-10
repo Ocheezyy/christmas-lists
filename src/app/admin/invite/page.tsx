@@ -3,23 +3,21 @@
 import type React from "react"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Check, Gift, AlertCircle } from "lucide-react"
+import { Copy, Check, Gift } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminInvitePage() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
 
     const formData = new FormData(e.currentTarget)
     const name = formData.get("name") as string
@@ -39,8 +37,9 @@ export default function AdminInvitePage() {
 
       const data = await response.json()
       setInviteUrl(data.url)
+      toast.success("Invite link created successfully!")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create invite")
+      toast.error(err instanceof Error ? err.message : "Failed to create invite")
     } finally {
       setLoading(false)
     }
@@ -51,9 +50,10 @@ export default function AdminInvitePage() {
     try {
       await navigator.clipboard.writeText(inviteUrl)
       setCopied(true)
+      toast.success("Link copied to clipboard!")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      alert("Failed to copy link")
+      toast.error("Failed to copy link")
     }
   }
 
@@ -74,13 +74,6 @@ export default function AdminInvitePage() {
             <CardDescription>Create a personalized link for a family member</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
             {!inviteUrl ? (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -117,13 +110,6 @@ export default function AdminInvitePage() {
               </form>
             ) : (
               <div className="space-y-4">
-                <Alert className="bg-secondary/10 border-secondary/50">
-                  <Check className="h-4 w-4 text-secondary-foreground" />
-                  <AlertDescription className="text-secondary-foreground">
-                    Invite link created successfully!
-                  </AlertDescription>
-                </Alert>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Share this link:</label>
                   <div className="flex gap-2">
