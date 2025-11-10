@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "User" ADD COLUMN     "counter" BIGINT NOT NULL DEFAULT 0;

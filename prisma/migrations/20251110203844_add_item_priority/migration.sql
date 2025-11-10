@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "Item" ADD COLUMN     "priority" INTEGER NOT NULL DEFAULT 0;

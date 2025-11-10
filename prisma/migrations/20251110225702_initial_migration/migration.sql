@@ -5,6 +5,7 @@ CREATE TABLE "User" (
     "credentialId" TEXT NOT NULL,
     "publicKey" BYTEA NOT NULL,
     "transports" TEXT,
+    "counter" BIGINT NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "inviteToken" TEXT,
     "inviteExpires" TIMESTAMP(3),
@@ -16,7 +17,10 @@ CREATE TABLE "User" (
 -- CreateTable
 CREATE TABLE "List" (
     "id" TEXT NOT NULL,
+    "name" TEXT,
     "userId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "List_pkey" PRIMARY KEY ("id")
 );
@@ -28,8 +32,10 @@ CREATE TABLE "Item" (
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "url" TEXT,
+    "imageUrl" TEXT,
     "purchased" BOOLEAN NOT NULL DEFAULT false,
     "purchasedBy" TEXT,
+    "priority" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Item_pkey" PRIMARY KEY ("id")
 );
