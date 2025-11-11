@@ -14,9 +14,10 @@ export async function GET() {
 
     const users = await prisma.user.findMany({
       where: {
-        lists: {
-          some: {}, // Only include users who have at least one list
-        },
+        OR: [
+          { id: currentUserId }, // Always include the current user
+          { lists: { some: {} } }, // Include other users who have at least one list
+        ],
       },
       select: {
         id: true,

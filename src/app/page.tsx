@@ -80,14 +80,15 @@ export default function HomePage() {
     )
   }
 
+  // This should never happen now since API always includes current user
   if (!users || users.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <Gift className="w-10 h-10 mx-auto mb-2 text-primary" />
-            <CardTitle>No Lists Yet</CardTitle>
-            <CardDescription>Please log in to view lists.</CardDescription>
+            <CardTitle>Error Loading Lists</CardTitle>
+            <CardDescription>Unable to load your lists. Please try logging in again.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/login" className="w-full">
