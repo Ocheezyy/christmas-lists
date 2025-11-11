@@ -13,6 +13,11 @@ export async function GET() {
     const currentUserId = user.id;
 
     const users = await prisma.user.findMany({
+      where: {
+        lists: {
+          some: {}, // Only include users who have at least one list
+        },
+      },
       select: {
         id: true,
         name: true,

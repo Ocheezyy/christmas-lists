@@ -2,16 +2,18 @@ import { NextResponse } from 'next/server';
 import { getRegOptions } from '@/lib/webauthn';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-import { randomBytes } from 'crypto';
 
 export async function POST(req: Request) {
   try {
     const { name, inviteToken } = await req.json();
 
-    // Verify invite token
+    // Verify invite token and get the existing user
     const invite = await prisma.user.findUnique({
       where: { inviteToken },
-      select: { inviteExpires: true }
+      select: { 
+        id: true,
+        inviteExpires: true 
+      }
     });
 
     if (!invite || !invite.inviteExpires || invite.inviteExpires < new Date()) {
@@ -21,8 +23,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate a new user ID
-    const userId = randomBytes(32).toString('hex');
+    // Use the existing user's ID from the invite
+    const userId = invite.id;
     
     // Get registration options
     const options = await getRegOptions(userId, name);
