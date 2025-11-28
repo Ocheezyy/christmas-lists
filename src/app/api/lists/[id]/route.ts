@@ -127,25 +127,51 @@ export async function PUT(
       }
     }
 
-    // Delete all existing items and create new ones
-    // This is simpler than trying to diff and update individually
-    await prisma.item.deleteMany({
+    // Get existing items to determine what to update, create, or delete
+    const existingItems = await prisma.item.findMany({
       where: { listId: id },
+      select: { id: true },
     });
 
+    const existingItemIds = existingItems.map(item => item.id);
+    const incomingItemIds = items.filter(item => item.id).map(item => item.id);
+
+    // Items to delete: existing items that are not in the incoming list
+    const itemsToDelete = existingItemIds.filter(id => !incomingItemIds.includes(id));
+
+    // Update the list and handle items
     const list = await prisma.list.update({
       where: { id },
       data: {
         name: name || null,
         items: {
-          create: items.map((item) => ({
-            title: item.title,
-            description: item.description || null,
-            url: item.url || null,
-            imageUrl: item.imageUrl || null,
-            price: item.price && item.price.trim() !== "" ? parseFloat(item.price) : null,
-            priority: item.priority || 0,
-          })),
+          // Update existing items
+          update: items
+            .filter(item => item.id && existingItemIds.includes(item.id))
+            .map(item => ({
+              where: { id: item.id },
+              data: {
+                title: item.title,
+                description: item.description || null,
+                url: item.url || null,
+                imageUrl: item.imageUrl || null,
+                price: item.price && item.price.trim() !== "" ? parseFloat(item.price) : null,
+                priority: item.priority || 0,
+              },
+            })),
+          // Create new items (items without an id)
+          create: items
+            .filter(item => !item.id)
+            .map(item => ({
+              title: item.title,
+              description: item.description || null,
+              url: item.url || null,
+              imageUrl: item.imageUrl || null,
+              price: item.price && item.price.trim() !== "" ? parseFloat(item.price) : null,
+              priority: item.priority || 0,
+            })),
+          // Delete items that are no longer in the list
+          delete: itemsToDelete.map(itemId => ({ id: itemId })),
         },
       },
       include: {
