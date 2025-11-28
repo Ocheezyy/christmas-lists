@@ -56,7 +56,7 @@ model Item {
   listId      String
   list        List     @relation(fields: [listId], references: [id])
   title       String
-  description String
+  description String?
   url         String?
   imageUrl    String?
   price       Decimal? @db.Decimal(10, 2)

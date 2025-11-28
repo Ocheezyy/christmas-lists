@@ -98,7 +98,7 @@ export async function POST(request: Request) {
         items: {
           create: items.map(item => ({
             title: item.title,
-            description: item.description,
+            description: item.description || null,
             url: item.url || null,
             imageUrl: item.imageUrl || null,
             price: item.price ? parseFloat(item.price) : null,
