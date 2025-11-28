@@ -24,6 +24,11 @@ export default function EditProfilePage() {
         const response = await fetch('/api/profile')
         
         if (!response.ok) {
+          if (response.status === 401) {
+            toast.error("Your session has expired. Please log in again.")
+            router.push("/login")
+            return
+          }
           throw new Error('Failed to load profile')
         }
         
@@ -38,7 +43,7 @@ export default function EditProfilePage() {
     }
 
     fetchProfile()
-  }, [])
+  }, [router])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,13 +68,19 @@ export default function EditProfilePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update profile')
+        if (response.status === 401) {
+          toast.error("Your session has expired. Please log in again.")
+          router.push("/login")
+          return
+        }
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update profile')
       }
 
       toast.success("Profile updated successfully")
       router.push('/my-lists')
-    } catch {
-      toast.error("Failed to update profile")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update profile")
       setSaving(false)
     }
   }

@@ -40,6 +40,16 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       try {
         const res = await fetch(`/api/share/${token}`)
         if (!res.ok) {
+          if (res.status === 404) {
+            setError("This shared link is invalid or has expired")
+            setLoading(false)
+            return
+          }
+          if (res.status === 410) {
+            setError("This shared link has expired")
+            setLoading(false)
+            return
+          }
           const json = await res.json()
           throw new Error(json?.error || "Failed to fetch")
         }

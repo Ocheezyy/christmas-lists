@@ -31,6 +31,15 @@ export default function AdminInvitePage() {
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Your session has expired. Please log in again.")
+          window.location.href = "/login"
+          return
+        }
+        if (response.status === 403) {
+          toast.error("Invalid admin secret or insufficient permissions")
+          return
+        }
         const data = await response.json()
         throw new Error(data.error || "Failed to create invite")
       }

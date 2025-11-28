@@ -78,6 +78,11 @@ const NewListPage = () => {
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Your session has expired. Please log in again.")
+          router.push("/login")
+          return
+        }
         const data = await response.json()
         throw new Error(data.error || "Failed to create list")
       }

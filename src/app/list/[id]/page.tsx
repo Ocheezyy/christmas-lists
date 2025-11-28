@@ -59,6 +59,19 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       try {
         const response = await fetch(`/api/lists/${id}`)
         if (!response.ok) {
+          if (response.status === 401) {
+            setError("Your session has expired. Please log in again.")
+            setTimeout(() => window.location.href = "/login", 2000)
+            return
+          }
+          if (response.status === 403) {
+            setError("You don't have permission to view this list")
+            return
+          }
+          if (response.status === 404) {
+            setError("List not found")
+            return
+          }
           throw new Error("Failed to load list")
         }
         const data = await response.json()
@@ -102,6 +115,19 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          alert("Your session has expired. Please log in again.")
+          window.location.href = "/login"
+          return
+        }
+        if (response.status === 403) {
+          alert("You don't have permission to update this item")
+          return
+        }
+        if (response.status === 404) {
+          alert("Item not found")
+          return
+        }
         throw new Error("Failed to update item")
       }
 
@@ -139,6 +165,15 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     try {
       const res = await fetch(`/api/lists/${id}/share`, { method: "POST" })
       if (!res.ok) {
+        if (res.status === 401) {
+          alert("Your session has expired. Please log in again.")
+          window.location.href = "/login"
+          return
+        }
+        if (res.status === 403) {
+          alert("You don't have permission to share this list")
+          return
+        }
         const json = await res.json()
         throw new Error(json?.error || "Failed to create share link")
       }

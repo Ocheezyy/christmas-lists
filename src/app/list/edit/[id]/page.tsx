@@ -57,6 +57,21 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
       try {
         const response = await fetch(`/api/lists/${id}`)
         if (!response.ok) {
+          if (response.status === 401) {
+            toast.error("Your session has expired. Please log in again.")
+            router.push("/login")
+            return
+          }
+          if (response.status === 403) {
+            toast.error("You don't have permission to edit this list")
+            router.push("/my-lists")
+            return
+          }
+          if (response.status === 404) {
+            toast.error("List not found")
+            router.push("/my-lists")
+            return
+          }
           throw new Error("Failed to load list")
         }
         const data = await response.json()
@@ -115,6 +130,16 @@ export default function EditListPage({ params }: { params: Promise<{ id: string 
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Your session has expired. Please log in again.")
+          router.push("/login")
+          return
+        }
+        if (response.status === 403) {
+          toast.error("You don't have permission to edit this list")
+          router.push("/my-lists")
+          return
+        }
         const data = await response.json()
         throw new Error(data.error || "Failed to update list")
       }
