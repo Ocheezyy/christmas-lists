@@ -113,6 +113,20 @@ export async function PUT(
       );
     }
 
+    // Validate prices
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.price && item.price.trim() !== "") {
+        const parsedPrice = parseFloat(item.price);
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          return NextResponse.json(
+            { error: `Invalid price for item "${item.title}": "${item.price}"` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Delete all existing items and create new ones
     // This is simpler than trying to diff and update individually
     await prisma.item.deleteMany({
@@ -129,7 +143,7 @@ export async function PUT(
             description: item.description || null,
             url: item.url || null,
             imageUrl: item.imageUrl || null,
-            price: item.price ? parseFloat(item.price) : null,
+            price: item.price && item.price.trim() !== "" ? parseFloat(item.price) : null,
             priority: item.priority || 0,
           })),
         },
